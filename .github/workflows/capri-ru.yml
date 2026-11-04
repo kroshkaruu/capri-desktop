@@ -47,7 +47,11 @@ jobs:
           python3 -c "from PIL import Image; Image.open('cross/icon.png').convert('RGBA').resize((1024,1024)).save('$app/Contents/Resources/Capri.icns')"
           curl -sSL --retry 3 -o $app/Contents/Resources/ggml-small-q5_1.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin
           ls -la $app/Contents/Resources >> logs/build.log
-          rcodesign sign $app 2>&1 | tail -5 | tee -a logs/build.log
+          # Only Apple Silicon's native parts stay; Windows, Linux and Intel ones confuse signing.
+          find $app/Contents/MacOS/runtimes -mindepth 1 -maxdepth 1 -type d ! -name macos-arm64 -exec rm -rf {} +
+          find $app/Contents/MacOS -type f \( -name '*.dylib' -o -name Capri \) | while read -r part; do rcodesign sign "$part" >/dev/null 2>&1 || echo "could not sign $part" | tee -a logs/build.log; done
+          rcodesign sign $app 2>&1 | grep -v '^signing\|^writing\|^adding' | tail -15 | tee -a logs/build.log
+          rcodesign verify $app/Contents/MacOS/Capri 2>&1 | tail -3 | tee -a logs/build.log
       - name: Package
         run: |
           set -e
