@@ -1,0 +1,79 @@
+name: Capri Mac RU
+
+on:
+  push:
+    branches: [capri-mochi]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: capri-mochi
+  cancel-in-progress: true
+
+jobs:
+  mac:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Ears
+        run: |
+          set -o pipefail
+          mkdir -p logs
+          dotnet publish ears/CapriEars.csproj -c Release -r osx-arm64 --self-contained -o ears/out -p:DebugType=none -clp:ErrorsOnly 2>&1 | tee logs/build.log
+          find ears/out/runtimes -mindepth 1 -maxdepth 1 -type d ! -name macos-arm64 -exec rm -rf {} + || true
+          curl -sSL --retry 3 -o ears/out/ggml-small-q5_1.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin
+          chmod +x ears/out/CapriEars
+          ls -la ears/out | head -20 >> logs/build.log
+      - name: Signing tool
+        run: cargo install --locked apple-codesign >/dev/null 2>&1 || cargo install apple-codesign
+      - name: Sign ears
+        run: |
+          find ears/out -type f \( -name '*.dylib' -o -name CapriEars \) | while read -r part; do rcodesign sign "$part" >/dev/null 2>&1 || echo "could not sign $part" | tee -a logs/build.log; done
+      - name: App
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: |
+          set -o pipefail
+          npm ci 2>&1 | tail -5 | tee -a logs/build.log
+          npx electron-builder --mac dir --arm64 2>&1 | tail -40 | tee -a logs/build.log
+          ls dist | tee -a logs/build.log
+      - name: Package
+        run: |
+          set -e
+          app=$(find dist -maxdepth 2 -name 'Capri.app' -type d | head -1)
+          test -n "$app"
+          ls -la "$app/Contents/Resources/ears" | head -5 | tee -a logs/build.log
+          mkdir -p pack
+          cp -R "$app" pack/Capri.app
+          cp "mac/Как установить.txt" "pack/Как установить.txt"
+          (cd pack && zip -qry ../Capri-Mac-RU.zip Capri.app "Как установить.txt")
+          ls -la Capri-Mac-RU.zip | tee -a logs/build.log
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="mac-ru-$(date +%Y%m%d)-${{ github.run_number }}"
+          gh release create "$tag" Capri-Mac-RU.zip --target capri-mochi --latest --title "Капри (mochiiwuff) для Mac по-русски — сборка ${{ github.run_number }}" --notes-file "mac/Как установить.txt"
+      - name: Share the logs
+        if: always()
+        run: |
+          mkdir -p logs
+          echo "${{ job.status }}" > logs/status.txt
+          git config user.name "capri-build"
+          git config user.email "capri-build@users.noreply.github.com"
+          cp -R logs /tmp/logs
+          git checkout --orphan build-log-mochi
+          git rm -rfq . >/dev/null
+          cp -R /tmp/logs/. .
+          git add -A status.txt build.log
+          git commit -qm "build ${{ github.run_number }}: ${{ job.status }}"
+          git push -f origin build-log-mochi
