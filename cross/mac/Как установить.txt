@@ -3,7 +3,7 @@
 1. Распакуй архив и перетащи Capri в папку «Программы» (Applications). Если старая Капри запущена — сначала закрой её (правый клик по ней → «Выйти из Капри»).
 
 2. Открой Терминал и выполни одну строку (macOS не знает это приложение и иначе не даст открыть):
-   xattr -dr com.apple.quarantine /Applications/Capri.app
+   xattr -cr /Applications/Capri.app && codesign --force --deep --sign - /Applications/Capri.app
 
 3. Запусти Капри. Mac спросит доступ к микрофону — разреши.
 
