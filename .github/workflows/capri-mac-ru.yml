@@ -32,7 +32,7 @@ jobs:
           find ears/out/runtimes -mindepth 1 -maxdepth 1 -type d ! -name macos-arm64 -exec rm -rf {} + || true
           curl -sSL --retry 3 -o ears/out/ggml-small-q5_1.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin
           chmod +x ears/out/CapriEars
-          ls -la ears/out | head -20 >> logs/build.log
+          ls -la ears/out > /tmp/earsls.txt; head -20 /tmp/earsls.txt >> logs/build.log
       - name: Signing tool
         run: cargo install --locked apple-codesign >/dev/null 2>&1 || cargo install apple-codesign
       - name: Sign ears
@@ -51,7 +51,7 @@ jobs:
           set -e
           app=$(find dist -maxdepth 2 -name 'Capri.app' -type d | head -1)
           test -n "$app"
-          ls -la "$app/Contents/Resources/ears" | head -5 | tee -a logs/build.log
+          ls -la "$app/Contents/Resources/ears" > /tmp/appls.txt; head -8 /tmp/appls.txt | tee -a logs/build.log
           mkdir -p pack
           cp -R "$app" pack/Capri.app
           cp "mac/Как установить.txt" "pack/Как установить.txt"
