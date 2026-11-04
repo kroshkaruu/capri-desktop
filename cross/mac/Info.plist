@@ -28,8 +28,6 @@
   <string>Капри включает, ставит на паузу и переключает музыку в Spotify или Музыке, когда ты просишь.</string>
   <key>NSMicrophoneUsageDescription</key>
   <string>Капри слушает тебя, чтобы понимать голосовые команды и вопросы.</string>
-  <key>NSSpeechRecognitionUsageDescription</key>
-  <string>Капри превращает твою речь в текст, чтобы отвечать на вопросы и выполнять команды.</string>
   <key>CFBundleDevelopmentRegion</key>
   <string>ru</string>
 </dict>

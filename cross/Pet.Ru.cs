@@ -48,6 +48,7 @@ namespace CapriDesktop
             ears.Phrase = HeardPhrase;
             ears.Problem = EarsProblem;
             ears.Ready = EarsReady;
+            ears.Status = delegate(string line) { ComeBack(); Talk.Answer("(голос)", line); };
         }
 
         // Called when her window first opens.
@@ -85,7 +86,7 @@ namespace CapriDesktop
             if (!Talk.Quiet && Talk.Reply != null && Talk.Reply.StartsWith("Включаю", StringComparison.Ordinal) == false) return;
             Talk.Answer("(голос)", onDevice
                 ? "Слышу тебя. Скажи «Капри» — и что сделать или о чём спросить."
-                : "Слышу тебя. Скажи «Капри» — и что сделать. Совет: включи Диктовку с русским языком в настройках клавиатуры, тогда я буду распознавать речь прямо на Mac, быстрее и без интернета.");
+                : "Слышу тебя. Скажи «Капри» — и что сделать.");
         }
 
         private void EarsProblem(string code, string text)
