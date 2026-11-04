@@ -1,0 +1,53 @@
+== files
+./Capri
+./libAvaloniaNative.dylib
+./libHarfBuzzSharp.dylib
+./libSkiaSharp.dylib
+./libSystem.Globalization.Native.dylib
+./libSystem.IO.Compression.Native.dylib
+./libSystem.Native.dylib
+./libSystem.Net.Security.Native.dylib
+./libSystem.Security.Cryptography.Native.Apple.dylib
+./libclrgc.dylib
+./libclrgcexp.dylib
+./libclrjit.dylib
+./libcoreclr.dylib
+./libhostfxr.dylib
+./libhostpolicy.dylib
+./libmscordaccore.dylib
+./libmscordbi.dylib
+./runtimes/macos-arm64/libggml-base-whisper.dylib
+./runtimes/macos-arm64/libggml-blas-whisper.dylib
+./runtimes/macos-arm64/libggml-cpu-whisper.dylib
+./runtimes/macos-arm64/libggml-metal-whisper.dylib
+./runtimes/macos-arm64/libggml-whisper.dylib
+./runtimes/macos-arm64/libwhisper.dylib
+./runtimes/macos-x64/libggml-base-whisper.dylib
+./runtimes/macos-x64/libggml-blas-whisper.dylib
+./runtimes/macos-x64/libggml-cpu-whisper.dylib
+./runtimes/macos-x64/libggml-whisper.dylib
+./runtimes/macos-x64/libwhisper.dylib
+total 186260
+drwxr-xr-x 2 runner runner      4096 Nov  4 22:08 .
+drwxr-xr-x 4 runner runner      4096 Nov  4 22:08 ..
+-rw-r--r-- 1 runner runner    631479 Nov  4 22:08 Capri.icns
+-rw-r--r-- 1 runner runner 190085487 Nov  4 22:08 ggml-small-q5_1.bin
+encountered a non Mach-O file with a nested rule: Contents/MacOS/Whisper.net.dll
+we do not know how to handle this scenario; either your bundle layout is invalid or you found a bug in this program
+if the bundle signs and verifies with Apple's tooling, consider reporting this issue
+encountered a non Mach-O file with a nested rule: Contents/MacOS/WindowsBase.dll
+we do not know how to handle this scenario; either your bundle layout is invalid or you found a bug in this program
+if the bundle signs and verifies with Apple's tooling, consider reporting this issue
+encountered a non Mach-O file with a nested rule: Contents/MacOS/ggml-metal.metal
+we do not know how to handle this scenario; either your bundle layout is invalid or you found a bug in this program
+if the bundle signs and verifies with Apple's tooling, consider reporting this issue
+encountered a non Mach-O file with a nested rule: Contents/MacOS/mscorlib.dll
+we do not know how to handle this scenario; either your bundle layout is invalid or you found a bug in this program
+if the bundle signs and verifies with Apple's tooling, consider reporting this issue
+encountered a non Mach-O file with a nested rule: Contents/MacOS/netstandard.dll
+we do not know how to handle this scenario; either your bundle layout is invalid or you found a bug in this program
+if the bundle signs and verifies with Apple's tooling, consider reporting this issue
+(the verify command is known to be buggy and gives misleading results; we highly recommend using Apple's tooling until this message is removed)
+CMS error: missing further values (at position 0)
+Error: problems reported during verification
+-rw-r--r-- 1 runner runner 243508278 Nov  4 22:08 Capri-RU-mac.zip
