@@ -30,7 +30,7 @@ namespace CapriDesktop
         internal string MainframeProgress { get { return pulling ? Pulling : null; } }
         internal bool MainframeInputSetup { get { return OperatingSystem.IsLinux() && !fingers; } }
         internal int MainframeVoiceMode { get { return Saved.Silent || Speakers.Known(Saved.VoiceProvider) == Speakers.Off ? 0 : Speakers.Known(Saved.VoiceProvider) == Speakers.Local ? 2 : 3; } }
-        internal string MainframeUpdate { get { return updateChecking ? "Checking for updates..." : UpdateNews ?? (updatePage == null ? "" : "An update is available."); } }
+        internal string MainframeUpdate { get { return updateChecking ? "Проверяю обновления..." : UpdateNews ?? (updatePage == null ? "" : "Есть обновление."); } }
         internal string MainframeLocalAddress { get { return localVoice.Url ?? ""; } }
         internal string MainframeLocalModel { get { return localVoice.Model ?? ""; } }
         internal string MainframeLocalVoice { get { return localVoice.Speaker ?? ""; } }
@@ -75,7 +75,7 @@ namespace CapriDesktop
             if (!Dispatcher.UIThread.CheckAccess()) return Dispatcher.UIThread.Invoke(() => MainframeTool(page));
             OpenMainframe();
             mainframe.OpenPage(page);
-            return "Opened Capri Mainframe.";
+            return "Открыла Мейнфрейм.";
         }
         private string MoveMainframe(string which)
         {
@@ -83,11 +83,11 @@ namespace CapriDesktop
             var all = Screens.All;
             var from = mainframe.Screens.ScreenFromWindow(mainframe) ?? ScreenHere();
             int at = PickScreen(all, from, which);
-            if (at < 0) return all.Count < 2 ? "There's no other screen to go to." : "There's no screen like that to go to.";
+            if (at < 0) return all.Count < 2 ? "Другого экрана нет." : "There's no screen like that to go to.";
             var area = all[at].WorkingArea;
             double scale = all[at].Scaling;
             mainframe.Position = new PixelPoint(area.X + Math.Max(0, (area.Width - (int)(mainframe.Width * scale)) / 2), area.Y + Math.Max(0, (area.Height - (int)(mainframe.Height * scale)) / 2));
-            return "Moved Capri Mainframe.";
+            return "Передвинула Мейнфрейм.";
         }
         internal void MainframeRefresh()
         {
@@ -116,7 +116,7 @@ namespace CapriDesktop
         internal NativeMenu TrayMenu()
         {
             var menu = new NativeMenu();
-            Action fill = () => { Sync(); hideItem.Header = Away ? "Show Capri" : "Hide Capri"; FillMenu(menu, ContextMenu.Items); };
+            Action fill = () => { Sync(); hideItem.Header = Away ? "Показать Капри" : "Спрятать Капри"; FillMenu(menu, ContextMenu.Items); };
             fill(); menu.NeedsUpdate += (_, _) => fill(); return menu;
         }
         private static void FillMenu(NativeMenu menu, System.Collections.IEnumerable source)

@@ -1,0 +1,95 @@
+name: Capri RU (Mac)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: capri-ru
+  cancel-in-progress: true
+
+jobs:
+  mac:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Build
+        id: build
+        run: |
+          set -o pipefail
+          mkdir -p logs
+          version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' cross/Capri.Cross.csproj)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          {
+            set -e
+            echo "== swift ears"
+            mkdir -p out
+            swiftc -O -target arm64-apple-macos13 cross/mac/ears/main.swift -o out/CapriEars \
+              -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __info_plist -Xlinker cross/mac/ears/Info.plist \
+              -framework Speech -framework AVFoundation
+            echo "== dotnet"
+            dotnet publish cross/Capri.Cross.csproj -c Release -r osx-arm64 --self-contained -o out/arm64 -p:DebugType=none -clp:ErrorsOnly
+          } 2>&1 | tee logs/build.log
+      - name: Bundle
+        run: |
+          set -e
+          version=${{ steps.build.outputs.version }}
+          mkdir -p Capri.iconset
+          for s in 16 32 128 256 512; do
+            sips -z $s $s cross/icon.png --out Capri.iconset/icon_${s}x${s}.png >/dev/null
+            d=$((s * 2))
+            sips -z $d $d cross/icon.png --out Capri.iconset/icon_${s}x${s}@2x.png >/dev/null
+          done
+          iconutil -c icns Capri.iconset -o Capri.icns
+          app=dist/Capri.app
+          mkdir -p $app/Contents/MacOS $app/Contents/Resources
+          cp -R out/arm64/. $app/Contents/MacOS/
+          cp out/CapriEars $app/Contents/MacOS/CapriEars
+          chmod +x $app/Contents/MacOS/CapriEars $app/Contents/MacOS/Capri
+          sed "s/@VERSION@/$version/g" cross/mac/Info.plist > $app/Contents/Info.plist
+          cp Capri.icns $app/Contents/Resources/Capri.icns
+          codesign --force --sign - $app/Contents/MacOS/CapriEars
+          codesign --force --deep --sign - $app
+          codesign --verify --verbose=2 $app 2>&1 | tee -a logs/build.log
+      - name: Smoke start
+        run: |
+          # Starts her for a few seconds to be sure she doesn't crash at once. Her ears ask for the mic, which a runner can't give.
+          ( dist/Capri.app/Contents/MacOS/Capri > logs/run.log 2>&1 & echo $! > pid ); sleep 12
+          if kill -0 $(cat pid) 2>/dev/null; then echo "RUNNING OK" | tee -a logs/run.log; kill $(cat pid); else echo "EXITED EARLY" | tee -a logs/run.log; fi
+          echo '{}' | timeout 5 dist/Capri.app/Contents/MacOS/CapriEars ru-RU >> logs/run.log 2>&1 || true
+      - name: Package
+        run: |
+          set -e
+          cp "cross/mac/Как установить.txt" "dist/Как установить.txt"
+          ln -s /Applications dist/Applications
+          hdiutil create -volname "Capri" -srcfolder dist -ov -format UDZO Capri-RU.dmg
+          rm dist/Applications
+          (cd dist && ditto -c -k --keepParent Capri.app ../Capri-RU-mac.zip)
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="ru-$(date +%Y%m%d)-${{ github.run_number }}"
+          gh release create "$tag" Capri-RU.dmg Capri-RU-mac.zip --latest --title "Капри по-русски (сборка ${{ github.run_number }})" --notes-file "cross/mac/Как установить.txt"
+      - name: Share the logs
+        if: always()
+        run: |
+          mkdir -p logs
+          echo "${{ job.status }}" > logs/status.txt
+          git config user.name "capri-build"
+          git config user.email "capri-build@users.noreply.github.com"
+          cp -R logs /tmp/logs
+          git checkout --orphan build-log
+          git rm -rfq . >/dev/null
+          cp -R /tmp/logs/. .
+          git add -A
+          git commit -qm "build ${{ github.run_number }}: ${{ job.status }}"
+          git push -f origin build-log

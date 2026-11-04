@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key>
+  <string>io.github.lachydotmcg.capri.ears</string>
+  <key>CFBundleName</key>
+  <string>Capri</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Капри слушает тебя, чтобы понимать голосовые команды и вопросы.</string>
+  <key>NSSpeechRecognitionUsageDescription</key>
+  <string>Капри превращает твою речь в текст, чтобы отвечать на вопросы и выполнять команды.</string>
+</dict>
+</plist>

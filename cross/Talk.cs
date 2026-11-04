@@ -17,7 +17,7 @@ namespace CapriDesktop
         internal const double Type = 14;
         internal const double Line = 19;
         internal string Heard;
-        internal string Prompt = "> you: ";
+        internal string Prompt = "> ты: ";
         internal string Reply;
         internal int Revealed;
         internal bool Thinking;
@@ -118,7 +118,7 @@ namespace CapriDesktop
 
         internal Bubble()
         {
-            Look.Overlay(this, "Capri says");
+            Look.Overlay(this, "Капри говорит");
             Content = Sheet;
             Sheet.PointerReleased += delegate(object sender, PointerReleasedEventArgs e) { if (e.InitialPressMouseButton == MouseButton.Left && Dismissed != null) Dismissed(); };
         }
@@ -174,11 +174,11 @@ namespace CapriDesktop
 
         internal Typer()
         {
-            Look.Overlay(this, "Talk to Capri");
+            Look.Overlay(this, "Написать Капри");
             ShowActivated = true;
             Width = Math.Ceiling(Sheet.PanelWidth());
             Height = Tall;
-            prompt = new TextBlock { Text = "> you:", FontFamily = Look.Mono, FontStyle = FontStyle.Italic, FontSize = Sheet.Type, Foreground = new SolidColorBrush(Look.Dim), VerticalAlignment = VerticalAlignment.Center };
+            prompt = new TextBlock { Text = "> ты:", FontFamily = Look.Mono, FontStyle = FontStyle.Italic, FontSize = Sheet.Type, Foreground = new SolidColorBrush(Look.Dim), VerticalAlignment = VerticalAlignment.Center };
             input.FontFamily = Look.Mono;
             input.FontSize = Sheet.Type;
             // No limit, so her brain reads a long request whole.
@@ -221,7 +221,7 @@ namespace CapriDesktop
             {
                 input.PasswordChar = value ? '\u2022' : '\0';
                 input.MaxLength = value ? 200 : 0;
-                prompt.Text = value ? "> key:" : "> you:";
+                prompt.Text = value ? "> ключ:" : "> ты:";
                 if (value) input.Text = "";
             }
         }
@@ -333,7 +333,7 @@ namespace CapriDesktop
 
         internal static double EdgeWidth(double s) { return Math.Max(1, Math.Round(1.5 * s)); }
 
-        internal static string Label(int part, bool chatting, bool muted) { return part == 1 ? "TYPE" : chatting && muted ? "MUTED" : "TALK"; }
+        internal static string Label(int part, bool chatting, bool muted) { return part == 1 ? "ТЕКСТ" : chatting && muted ? "ВЫКЛ" : "ГОЛОС"; }
 
         internal static int Lit(int bar, int level)
         {
@@ -432,9 +432,9 @@ namespace CapriDesktop
             context.FillRectangle(new SolidColorBrush(Color.FromArgb(220, Look.Pink.R, Look.Pink.G, Look.Pink.B)), new Rect(body.Left + Math.Round(12 * s), body.Bottom + Math.Round(2 * s) - sliver, Math.Round(11 * s), sliver));
             Color wash = Mix(Fill, Look.Cyan, WashAlpha);
             string talk = Label(2, chatting, muted);
-            Rect[] pencil = Layout(s, 1, "TYPE"), wave = Layout(s, 2, talk);
+            Rect[] pencil = Layout(s, 1, "ТЕКСТ"), wave = Layout(s, 2, talk);
             Pencil(context, pencil[0].Center, 0.9 * s, hover == 1 ? Look.Cyan : Look.Ink, hover == 1 ? wash : Fill);
-            Words(context, "TYPE", s, pencil[1], hover == 1 ? Look.Cyan : Caption);
+            Words(context, "ТЕКСТ", s, pencil[1], hover == 1 ? Look.Cyan : Caption);
             Meter(context, wave[0], s, chatting, muted, level, hover == 2 || chatting ? Look.Cyan : Look.Ink);
             Words(context, talk, s, wave[1], chatting && muted ? Look.Red : hover == 2 || chatting ? Look.Cyan : Caption);
             if (!chatting) return;
@@ -637,7 +637,7 @@ namespace CapriDesktop
                 int x0 = (int)(body.Left + cut + 2), top = (int)(body.Top + edge), half = (int)(body.Top + Math.Floor(body.Height / 2)), side = (int)(body.Left + edge);
                 if (Brightest(idle.At(x0, top - 1)) < 150 || Brightest(idle.At(x0, top)) > 60 || Brightest(idle.At(side - 1, half)) < 150 || Brightest(idle.At(side, half)) > 60) return "Its neon edge isn't crisp" + at;
                 if (!Red(hushed.At((int)mic.Left, (int)(mic.Top + cut + 1))) || Red(live0.At((int)mic.Left, (int)(mic.Top + cut + 1)))) return "The mic button's edge didn't go red only while muted" + at;
-                Rect[] pencil = Layout(s, 1, "TYPE"), wave = Layout(s, 2, "TALK"), hush = Layout(s, 2, "MUTED");
+                Rect[] pencil = Layout(s, 1, "ТЕКСТ"), wave = Layout(s, 2, "ГОЛОС"), hush = Layout(s, 2, "ВЫКЛ");
                 int letters = (int)(6 * s * s);
                 if (idle.Count(pencil[1], Grey) < letters || idle.Count(wave[1], Grey) < letters) return "Its TYPE and TALK labels are missing" + at;
                 if (typing.Count(pencil[1], Cyan) < letters || typing.Count(wave[1], Cyan) > 0 || talking.Count(wave[1], Cyan) < letters || talking.Count(pencil[1], Cyan) > 0) return "Hovering didn't light just its part cyan" + at + ": " + typing.Count(pencil[1], Cyan) + " " + typing.Count(wave[1], Cyan) + " " + talking.Count(wave[1], Cyan) + " " + talking.Count(pencil[1], Cyan) + " of " + letters + " in " + pencil[1] + " and " + wave[1];
@@ -718,7 +718,7 @@ namespace CapriDesktop
 
         internal Pill()
         {
-            Look.Overlay(this, "Talk to Capri");
+            Look.Overlay(this, "Написать Капри");
             Width = Wide;
             Height = Tall;
             Content = face;

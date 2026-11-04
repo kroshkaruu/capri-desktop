@@ -48,7 +48,7 @@ namespace CapriDesktop
                 DateTime due;
                 if (reminder == null || string.IsNullOrWhiteSpace(reminder.Text) || !DateTime.TryParseExact(reminder.When, "o", CultureInfo.InvariantCulture, DateTimeStyles.None, out due))
                 {
-                    remindersError = "Couldn't read a saved reminder.";
+                    remindersError = "Не получилось прочитать сохранённое напоминание.";
                     break;
                 }
                 reminder.Late = !reminder.Said && due <= started;
@@ -93,29 +93,30 @@ namespace CapriDesktop
                 {
                     List<Reminder> waiting = reminders.FindAll(pending => !pending.Said);
                     waiting.Sort(delegate(Reminder left, Reminder right) { return left.Due.CompareTo(right.Due); });
-                    List<string> lines = waiting.ConvertAll(listed => listed.Due.ToString("f") + ": " + listed.Text);
-                    return lines.Count == 0 ? "You have no reminders waiting." : "Your reminders:\n" + string.Join("\n", lines.ToArray());
+                    List<string> lines = waiting.ConvertAll(listed => Ru.Moment(listed.Due) + " — " + listed.Text);
+                    return lines.Count == 0 ? "Нет ни таймеров, ни напоминаний." : "Твои таймеры и напоминания:\n" + string.Join("\n", lines.ToArray());
                 }
                 List<Reminder> changed = new List<Reminder>(reminders);
                 if (args.Action == "cancel")
                 {
                     string wanted = Key(args.Text);
-                    if (wanted.Length == 0 || wanted == "the" || wanted == "my") return "Couldn't find that reminder.";
+                    if (wanted.Length == 0 || wanted == "the" || wanted == "my") return "Не нашла такое напоминание.";
                     Reminder cancelled = changed.Find(exact => !exact.Said && Key(exact.Text) == wanted)
                         ?? changed.Find(part => !part.Said && (" " + Key(part.Text) + " ").Contains(" " + wanted + " "));
-                    if (cancelled == null) return "Couldn't find that reminder.";
+                    if (cancelled == null) return "Не нашла такое напоминание.";
                     changed.Remove(cancelled);
                     Write(remindersPath, changed);
                     reminders = changed;
-                    return "Cancelled your reminder: " + cancelled.Text;
+                    return cancelled.Text == "Таймер" ? "Таймер отменила." : "Отменила напоминание: " + cancelled.Text;
                 }
                 DateTime when;
-                if (string.IsNullOrWhiteSpace(args.Text)) return "What should I remind you about?";
-                if (!Parse(args.When, Now(), out when)) return "What time should I remind you? Try in 20 minutes, at 5pm or tomorrow at 9.";
+                if (string.IsNullOrWhiteSpace(args.Text)) return "О чём напомнить?";
+                DateTime asked = Now();
+                if (!Parse(args.When, asked, out when)) return "Когда напомнить? Например: через 20 минут, в 17:30 или завтра в 9.";
                 changed.Add(new Reminder { Text = args.Text.Trim(), When = DateTime.SpecifyKind(when, DateTimeKind.Unspecified).ToString("o", CultureInfo.InvariantCulture) });
                 Write(remindersPath, changed);
                 reminders = changed;
-                return "I'll remind you " + when.ToString("f") + ": " + args.Text.Trim();
+                return args.Text.Trim() == "Таймер" ? "Таймер на " + Ru.Span(when - asked) + " поставила. Прозвенит в " + when.ToString("HH:mm") + "." : "Напомню " + Ru.Moment(when) + ": " + args.Text.Trim();
             }
         }
 
@@ -131,7 +132,8 @@ namespace CapriDesktop
                 next.Said = true;
                 try { Write(remindersPath, reminders); }
                 catch { next.Said = false; throw; }
-                return next.Late ? "Late reminder, due " + next.Due.ToString("f") + ": " + next.Text : "Reminder: " + next.Text;
+                if (next.Text == "Таймер") return next.Late ? "Пока меня не было, сработал таймер (" + next.Due.ToString("HH:mm") + ")." : "Дзынь! Время вышло, таймер закончился.";
+                return next.Late ? "Пропущенное напоминание (" + Ru.Moment(next.Due) + "): " + next.Text : "Напоминаю: " + next.Text;
             }
         }
 
@@ -300,6 +302,8 @@ namespace CapriDesktop
         internal static bool Parse(string text, DateTime now, out DateTime when)
         {
             when = now;
+            if (Ru.Parse(text, now, out when)) return true;
+            when = now;
             string plain = Fold(text).TrimEnd('.', ',', '!', '?');
             Match relative = Regex.Match(plain, @"^(?:in|en|dans|za|em|dentro de|daqui a)\s+(.*?)\s*(minutes?|mins?|minutos?|minuten|minut(?:e|y|a)?|hours?|hrs?|horas?|heures?|stunden?|godzin(?:e|y|a)?|seconds?|secs?|segundos?|secondes?|sekunden?|sekund(?:e|y|a)?)$");
             if (relative.Success)
@@ -372,6 +376,133 @@ namespace CapriDesktop
                 hour = hour % 12 + (clock.Groups[3].Value == "pm" ? 12 : 0);
             }
             if (nextHour) hour = (hour + 23) % 24;
+            return true;
+        }
+    }
+}
+
+namespace CapriDesktop
+{
+    // Время по-русски: «через 10 минут», «на полчаса», «в 17:30», «завтра в 9 утра», и как его показать.
+    internal static class Ru
+    {
+        private static readonly CultureInfo Culture = CultureInfo.GetCultureInfo("ru-RU");
+
+        internal static string Moment(DateTime when)
+        {
+            DateTime today = DateTime.Now.Date;
+            if (when.Date == today) return "сегодня в " + when.ToString("HH:mm");
+            if (when.Date == today.AddDays(1)) return "завтра в " + when.ToString("HH:mm");
+            return when.ToString("d MMMM в HH:mm", Culture);
+        }
+
+        internal static string Span(TimeSpan span)
+        {
+            int seconds = (int)Math.Round(span.TotalSeconds);
+            if (seconds < 60) return seconds + " " + Plural(seconds, "секунду", "секунды", "секунд");
+            int hours = seconds / 3600, minutes = (seconds % 3600 + 30) / 60;
+            if (minutes == 60) { hours++; minutes = 0; }
+            string result = hours > 0 ? hours + " " + Plural(hours, "час", "часа", "часов") : "";
+            if (minutes > 0) result += (result.Length > 0 ? " " : "") + minutes + " " + Plural(minutes, "минуту", "минуты", "минут");
+            return result;
+        }
+
+        internal static string Plural(int n, string one, string few, string many)
+        {
+            int mod100 = n % 100, mod10 = n % 10;
+            if (mod100 >= 11 && mod100 <= 14) return many;
+            if (mod10 == 1) return one;
+            if (mod10 >= 2 && mod10 <= 4) return few;
+            return many;
+        }
+
+        private static readonly string[,] Words =
+        {
+            { "ноль", "0" }, { "одну", "1" }, { "одна", "1" }, { "один", "1" }, { "две", "2" }, { "два", "2" }, { "три", "3" }, { "четыре", "4" },
+            { "пять", "5" }, { "шесть", "6" }, { "семь", "7" }, { "восемь", "8" }, { "девять", "9" }, { "десять", "10" }, { "одиннадцать", "11" },
+            { "двенадцать", "12" }, { "тринадцать", "13" }, { "четырнадцать", "14" }, { "пятнадцать", "15" }, { "шестнадцать", "16" },
+            { "семнадцать", "17" }, { "восемнадцать", "18" }, { "девятнадцать", "19" }, { "двадцать", "20" }, { "тридцать", "30" },
+            { "сорок", "40" }, { "пятьдесят", "50" }, { "шестьдесят", "60" }, { "девяносто", "90" }, { "сто", "100" },
+        };
+
+        private static double Amount(string text)
+        {
+            string plain = text.Trim();
+            if (plain.Length == 0) return 1;
+            if (plain == "пол" || plain == "половину") return 0.5;
+            if (plain == "полтора" || plain == "полторы") return 1.5;
+            if (plain == "пару" || plain == "пара") return 2;
+            if (plain == "несколько") return 3;
+            double value;
+            if (double.TryParse(plain.Replace(',', '.'), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out value)) return value;
+            double total = 0;
+            bool any = false;
+            foreach (string word in plain.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                bool found = false;
+                for (int i = 0; i < Words.GetLength(0); i++)
+                    if (Words[i, 0] == word) { total += double.Parse(Words[i, 1], CultureInfo.InvariantCulture); found = true; any = true; break; }
+                if (!found && word != "и") return -1;
+            }
+            return any ? total : -1;
+        }
+
+        private static double Unit(string unit)
+        {
+            if (unit.StartsWith("сек") || unit == "с") return 1.0 / 60;
+            if (unit.StartsWith("мин") || unit == "м") return 1;
+            if (unit.StartsWith("час") || unit == "ч") return 60;
+            return -1;
+        }
+
+        internal static bool Parse(string text, DateTime now, out DateTime when)
+        {
+            when = now;
+            string plain = Regex.Replace((text ?? "").ToLowerInvariant().Replace('ё', 'е'), @"[.,!?]+$", "").Trim();
+            if (!Regex.IsMatch(plain, @"[а-я]")) return false;
+            plain = Regex.Replace(plain, @"\s+", " ");
+            plain = Regex.Replace(plain, @"^(?:через|на|спустя|за)\s+", "");
+            if (plain == "полчаса" || plain == "пол часа") { when = now.AddMinutes(30); return true; }
+            if (plain == "полминуты" || plain == "пол минуты") { when = now.AddSeconds(30); return true; }
+            if (plain == "час" || plain == "часик") { when = now.AddHours(1); return true; }
+            if (plain == "минуту" || plain == "минутку") { when = now.AddMinutes(1); return true; }
+            // «1 час 30 минут», «два часа», «10 минут», «пятнадцать секунд», «5 мин»
+            Match parts = Regex.Match(plain, @"^(?:(.*?)\s*(час(?:а|ов|ик)?|ч)\s*)?(?:(.*?)\s*(минут(?:а|у|ы|ку|ки)?|мин|м|секунд(?:а|у|ы)?|сек|с))?$");
+            if (parts.Success && (parts.Groups[2].Success || parts.Groups[4].Success))
+            {
+                double minutes = 0;
+                if (parts.Groups[2].Success)
+                {
+                    double hours = Amount(parts.Groups[1].Value);
+                    if (hours < 0) return false;
+                    minutes += hours * 60;
+                }
+                if (parts.Groups[4].Success)
+                {
+                    double count = Amount(parts.Groups[3].Value);
+                    if (count < 0) return false;
+                    minutes += count * Unit(parts.Groups[4].Value);
+                }
+                if (minutes <= 0 || minutes > 60 * 24 * 7) return false;
+                when = now.AddMinutes(minutes);
+                return true;
+            }
+            // «в 17:30», «в 9 утра», «завтра в 8», «в 7 вечера», «сегодня в 23.15»
+            Match clock = Regex.Match(plain, @"^(?:(сегодня|завтра|послезавтра)\s+)?(?:в\s+)?(\d{1,2})(?:[:.\s](\d{2}))?(?:\s*(?:ч|час(?:а|ов)?))?(?:\s+(утра|дня|вечера|ночи))?$");
+            if (!clock.Success) return false;
+            int hour = int.Parse(clock.Groups[2].Value, CultureInfo.InvariantCulture);
+            int minute = clock.Groups[3].Success ? int.Parse(clock.Groups[3].Value, CultureInfo.InvariantCulture) : 0;
+            string part = clock.Groups[4].Value;
+            if ((part == "дня" || part == "вечера") && hour < 12) hour += 12;
+            if (part == "ночи" && hour == 12) hour = 0;
+            if (hour > 23 || minute > 59) return false;
+            int days = clock.Groups[1].Value == "завтра" ? 1 : clock.Groups[1].Value == "послезавтра" ? 2 : 0;
+            when = now.Date.AddDays(days).AddHours(hour).AddMinutes(minute);
+            if (days == 0 && when <= now)
+            {
+                if (part.Length == 0 && hour < 12 && when.AddHours(12) > now) when = when.AddHours(12);
+                else when = when.AddDays(1);
+            }
             return true;
         }
     }

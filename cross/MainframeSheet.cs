@@ -57,7 +57,7 @@ namespace CapriDesktop
             Caption("OpenAI speech API", 28, 52, 328, 18, MainframeTheme.Faint, 34.0 / 3);
             var address = Input("Address", LocalSpeaker.Default, 28, 84, 328, () => pet.MainframeLocalAddress);
             var model = Input("Model", "Optional", 28, 140, 160, () => pet.MainframeLocalModel);
-            var voice = Input("Voice", "Optional", 196, 140, 160, () => pet.MainframeLocalVoice);
+            var voice = Input("Голос", "Optional", 196, 140, 160, () => pet.MainframeLocalVoice);
             Caption("Format", 28, 196, 146, 18);
             var format = Put(Page, new NeonPicker(), 184, 193, 172, 22, "Format");
             format.Options(new[] { "WAV", "PCM 24 kHz" }); Rows["Format"] = format;
@@ -70,12 +70,12 @@ namespace CapriDesktop
                 try { if (url.Trim().Length > 0 && url.Trim() != "-") LocalSpeaker.Endpoint(url.Trim()); }
                 catch (VoiceException error) { note.Text = error.Message; note.InvalidateVisual(); return false; }
                 pet.SetLocalVoice("url", url); pet.SetLocalVoice("model", modelName); pet.SetLocalVoice("voice", voiceName);
-                note.Text = "Saved."; note.InvalidateVisual();
+                note.Text = "Сохранено."; note.InvalidateVisual();
                 return true;
             };
             Button("Test voice", 28, 224, 84, 28, () => { if (save() && Program.Smoke == null) pet.HearStyle(); });
-            Button("Save", 120, 224, 150, 28, () => save()).Accent = MainframeTheme.Cyan;
-            Button("Cancel", 278, 224, 78, 28, Close);
+            Button("Сохранить", 120, 224, 150, 28, () => save()).Accent = MainframeTheme.Cyan;
+            Button("Отмена", 278, 224, 78, 28, Close);
             foreach (var entry in new[] { address, model, voice }) entry.Box.KeyDown += (_, e) => { if (e.Key == Key.Enter) { save(); e.Handled = true; } };
             return 300;
         }
@@ -178,7 +178,7 @@ namespace CapriDesktop
                 }
                 catch (Exception) { if (!closed) note.Text = "Couldn't open the note picker."; }
             };
-            Button("Close", 388, 164, 104, 26, Close);
+            Button("Закрыть", 388, 164, 104, 26, Close);
             return 214;
         }
         private void Sync()

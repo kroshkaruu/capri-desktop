@@ -179,19 +179,19 @@ namespace CapriDesktop
         private const double StandX = 0.35;
         private const double StandY = 0.99;
         private static readonly double[] WanderPaces = { 3, 1, 0.45, 0.18 };
-        internal static readonly string[] WanderNames = { "Off", "Rarely", "Sometimes", "Often", "Restless" };
-        private static readonly string[] Lengths = { "Short", "Medium", "Long" };
+        internal static readonly string[] WanderNames = { "Выкл", "Редко", "Иногда", "Часто", "Постоянно" };
+        private static readonly string[] Lengths = { "Коротко", "Средне", "Длинно" };
         private static readonly int[] Recalls = { 8, 16, 32 };
-        internal static readonly string[] SoundNames = { "Off", "Quiet", "Normal", "Loud" };
+        internal static readonly string[] SoundNames = { "Выкл", "Тихо", "Обычно", "Громко" };
         internal static readonly int[] SoundLevels = { 0, 30, 60, 100 };
-        internal const string Offline = "My brain's offline. Open Capri Mainframe and set up her brain: " + Starter + ".";
+        internal const string Offline = "Мозг не подключён. Нажми на меня правой кнопкой → «Ключ DeepSeek...» и вставь ключ. Или: " + Starter + ".";
         // The brain she downloads for herself through Ollama when it has none yet, so no terminal is needed.
         internal const string Starter = "gemma4:e4b";
         internal const string PullChoice = "Download " + Starter + ", her brain (a few GB)";
         internal const string NoOllama = "Ollama isn't running. Install it from ollama.com and open it.";
         private const string FreeKeyPage = "https://build.nvidia.com/settings/api-keys";
-        internal const string KeyChoice = "Use an API key...";
-        internal const string NotAKey = "That doesn't look like a brain key. Try NVIDIA, Google AI Studio, OpenRouter, OpenAI, Claude or DeepSeek.";
+        internal const string KeyChoice = "Использовать API-ключ...";
+        internal const string NotAKey = "Это не похоже на ключ. Нужен ключ DeepSeek, он начинается с sk-.";
         internal const string FreeKeySteps = "Make a key on NVIDIA's page and copy it. Paste it under BRAIN in Capri Mainframe.";
         internal const string DiscordPage = "https://discord.gg/F4fDHfGtFk";
         internal const string HelpPage = "https://capriai.app/help/";
@@ -199,7 +199,7 @@ namespace CapriDesktop
         private const string LatestRelease = "https://api.github.com/repos/lachydotmcg/capri-desktop/releases/latest";
         private const string ReleasesPage = "https://github.com/lachydotmcg/capri-desktop/releases/latest";
         internal static readonly double[] Sizes = { 140, 170, 240, 320, 440, 560 };
-        internal static readonly string[] SizeNames = { "Tiny", "Small", "Medium", "Large", "Huge", "Giant" };
+        internal static readonly string[] SizeNames = { "Крошечная", "Маленькая", "Средне", "Большая", "Огромная", "Гигантская" };
         internal readonly Brain Brain = new Brain();
         internal readonly Talk Talk;
         internal Desk Desk = Desk.Make();
@@ -229,11 +229,11 @@ namespace CapriDesktop
         private readonly Clip wake = new Clip("wake", 13, 15, 1.11);
         internal static readonly string[] PetLines =
         {
-            "Heh. Okay, I'll allow it.", "Pets logged. Morale up twelve percent.", "Careful, choom. I bite viruses.",
-            "Head pats? On my chrome? Bold.", "Okay, that's nice. Don't tell anyone.", "System status: very patted.",
-            "You're gonna wear a groove in my firmware, choom.", "Easy on the hair. It took three patches to get it like this.",
-            "Affection detected. Sending some back. Hi.", "Keep going. This beats defragging.", "Hehe. My cooling fans just kicked in.",
-            "Ten out of ten pats. Would get patted again.", "Is this a bribe? Because it's working.", "Mmm. If I start glitch-purring, that's on you."
+            "Хех. Ладно, разрешаю.", "Поглаживания записаны. Боевой дух +12%.", "Осторожно, чумба. Я кусаю вирусы.",
+            "Гладить по голове? Мой хром? Смело.", "Ладно, это приятно. Только никому не говори.", "Статус системы: очень поглажена.",
+            "Ты мне прошивку до дыр протрёшь, чумба.", "Аккуратнее с волосами. Три патча ушло на эту укладку.",
+            "Обнаружена нежность. Отправляю обратно. Привет.", "Продолжай. Это лучше дефрагментации.", "Хех. У меня аж кулеры завелись.",
+            "Десять поглаживаний из десяти. Повторила бы.", "Это взятка? Потому что работает.", "Ммм. Если начну глючно мурлыкать — сам виноват."
         };
         private readonly List<double> petTurns = new List<double>();
         private int petX;
@@ -305,8 +305,8 @@ namespace CapriDesktop
         private double nextWander = -1;
         // Check in on me, like on Windows and on by default: now and then she glitches in at the top of her screen to say hi,
         // even when hidden, and hides again afterwards if she was. Pop-ins sets how often.
-        internal static readonly string[] PopLines = { "Boo. Just checking on you.", "Hi! Don't mind me.", "Peekaboo.", "Miss me? I missed you.", "Hey, you. Having fun?", "Surprise. I got bored without you." };
-        internal static readonly string[] PopNames = { "Rarely", "Sometimes", "Often" };
+        internal static readonly string[] PopLines = { "Бу. Просто проверяю, как ты.", "Привет! Не обращай внимания.", "Ку-ку.", "Скучал? А я скучала.", "Эй, ты. Весело тебе?", "Сюрприз. Мне без тебя скучно." };
+        internal static readonly string[] PopNames = { "Редко", "Иногда", "Часто" };
         private static readonly double[,] PopPaces = { { 1200, 1200 }, { 480, 720 }, { 180, 300 } };
         private const string PopHeard = "(pops in)";
         private readonly List<MenuItem> popPicks = new List<MenuItem>();
@@ -323,14 +323,14 @@ namespace CapriDesktop
         // Cyberpunk 2077 starting, or a Night City song coming on, is home for her, like on Windows: she cheers once, then waits
         // two hours before cheering for the same again. Check in on me off stops it.
         internal const double HomeGap = 7200;
-        internal static readonly string[] HomeGameLines = { "Night City?! You're taking me home, choom.", "Ooh, Cyberpunk. Go wreck some corpos for me.", "[SIGNAL CORRUPTED] ...wait. I know that skyline." };
-        internal static readonly string[] HomeSongLines = { "Wait, that's Night City. Turn it up.", "Ooh, my soundtrack. Preem taste.", "Now that's music. You're learning." };
+        internal static readonly string[] HomeGameLines = { "Найт-Сити?! Ты везёшь меня домой, чумба.", "О, Киберпанк. Разнеси пару корпоратов за меня.", "[СИГНАЛ ПОВРЕЖДЁН] ...стоп. Я знаю этот горизонт." };
+        internal static readonly string[] HomeSongLines = { "Погоди, это же Найт-Сити. Сделай погромче.", "О, мой саундтрек. Премиальный вкус.", "Вот это музыка. Учишься." };
         private bool homeBusy, homeGame, homeSong;
         private double homeAt = -HomeGap, gameCheered = -HomeGap, songCheered = -HomeGap;
         // A computer stuck near full CPU for about a minute gets a joke from her, at most once every half hour and never over a
         // full-screen window, like on Windows (Zenni's idea).
         internal const double LagGap = 1800;
-        internal static readonly string[] LagLines = { "Your CPU's cooking, choom. Careful, I might go cyberpsycho.", "Everything's lagging. One more tab and I go full cyberpsycho.", "[SIGNAL CORRUPTED] ...this lag is making me cyberpsycho. Close something." };
+        internal static readonly string[] LagLines = { "Процессор плавится, чумба. Осторожно, я могу стать киберпсихом.", "Всё лагает. Ещё одна вкладка — и я киберпсих.", "[СИГНАЛ ПОВРЕЖДЁН] ...от этих лагов я схожу с ума. Закрой что-нибудь." };
         private long lagIdle, lagTotal;
         private int lagHot;
         private double lagAt = -LagGap, lagSaid = -LagGap;
@@ -338,9 +338,9 @@ namespace CapriDesktop
         // they're at the computer, she comes over near the mouse and asks. Noticing her gets a happy line; 20 s of nothing gets a
         // sulk and twice the wait, up to 8 hours.
         internal const double NudgeGap = 7200;
-        internal static readonly string[] NudgeLines = { "Psst. Remember me? Tiny, glitchy, very important.", "I'm bored. Entertain me.", "Hey. Hey. Look at me.", "You've been ignoring me for ages. Rude.", "Pay attention to me or I start clicking things.", "Knock knock. It's your favourite gremlin.", "Choom. I'm bored out of my many minds." };
-        internal static readonly string[] NoticedLines = { "Finally. Hi.", "There you are.", "Knew you couldn't resist me." };
-        internal static readonly string[] SnubbedLines = { "Fine. Ignore me. See if I care.", "Wow. Ignored. Noted.", "I'll just sit here. Alone. Bored." };
+        internal static readonly string[] NudgeLines = { "Пс-с. Помнишь меня? Маленькая, глючная, очень важная.", "Скучно. Развлеки меня.", "Эй. Эй. Посмотри на меня.", "Ты меня игнорируешь уже вечность. Грубо.", "Обрати на меня внимание, или я начну всё нажимать.", "Тук-тук. Это твой любимый гремлин.", "Чумба. Мне скучно во всех моих потоках." };
+        internal static readonly string[] NoticedLines = { "Наконец-то. Привет.", "Вот ты где.", "Знала, что не устоишь." };
+        internal static readonly string[] SnubbedLines = { "Ладно. Игнорируй. Мне всё равно.", "Вау. Проигнорили. Запомню.", "Посижу тут. Одна. Скучаю." };
         private const string NudgeHeard = "(wants attention)";
         private double noticed = -1;
         private int noticedClicks, noticedAsked, noticedPets;
@@ -351,7 +351,7 @@ namespace CapriDesktop
         // Watch my screen, like on Windows and off until ticked: every so often she takes a quiet screenshot and comments when
         // something's worth a line. Glance every sets how often; Keep her caught up keeps the glances she stays quiet about.
         internal static readonly int[] GlanceGaps = { 10, 15, 30, 60, 90, 120, 180, 300, 600 };
-        internal static readonly string[] GlanceGapNames = { "10 s", "15 s", "30 s", "1 min", "1.5 min", "2 min", "3 min", "5 min", "10 min" };
+        internal static readonly string[] GlanceGapNames = { "10 s", "15 s", "30 s", "1 мин", "1,5 мин", "2 мин", "3 мин", "5 мин", "10 мин" };
         private readonly List<MenuItem> gapPicks = new List<MenuItem>();
         private MenuItem watchItem;
         private MenuItem caughtUpItem;
@@ -395,26 +395,26 @@ namespace CapriDesktop
         // Move > Fall asleep after, like Windows' Sleep slider: how long without the mouse or keyboard before she dozes off
         // where she stands, 0 for never. Where she was told the mouse was when she fell asleep, to wake when it moves.
         internal static readonly int[] Sleeps = { 0, 60, 120, 300, 600, 1800 };
-        internal static readonly string[] SleepNames = { "Never", "1 min", "2 min", "5 min", "10 min", "30 min" };
+        internal static readonly string[] SleepNames = { "Никогда", "1 мин", "2 мин", "5 мин", "10 мин", "30 мин" };
         private readonly List<MenuItem> sleepPicks = new List<MenuItem>();
         private double nextSleepCheck;
         private bool sleepChecking;
         private double sleepIdle;
         private MenuItem sitItem;
         // Settings > Bubble, like Windows: how long her replies stay up.
-        internal static readonly string[] BubbleNames = { "Quick", "Normal", "Long" };
+        internal static readonly string[] BubbleNames = { "Быстро", "Обычно", "Длинно" };
         private readonly List<MenuItem> bubblePicks = new List<MenuItem>();
         // Settings > Volume, like Windows: her spoken voice, Mute to 150%. Her sound effects stay on Sounds.
         internal static readonly int[] Volumes = { 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150 };
-        internal static readonly string[] VolumeNames = { "Mute", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%", "125%", "150%" };
+        internal static readonly string[] VolumeNames = { "Без звука", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%", "125%", "150%" };
         private readonly List<MenuItem> volumePicks = new List<MenuItem>();
         // Settings > Voice style, Windows' Pitch, Speed, Robot and Glitch sliders. They change her ElevenLabs voice here.
-        internal static readonly string[] PitchNames = { "-6", "-5", "-4", "-3", "-2", "-1", "Normal", "+1", "+2", "+3", "+4", "+5", "+6" };
+        internal static readonly string[] PitchNames = { "-6", "-5", "-4", "-3", "-2", "-1", "Обычно", "+1", "+2", "+3", "+4", "+5", "+6" };
         internal static readonly int[] Paces = { 70, 80, 90, 100, 110, 120, 130, 140, 150 };
-        internal static readonly string[] PaceNames = { "0.7x", "0.8x", "0.9x", "Normal", "1.1x", "1.2x", "1.3x", "1.4x", "1.5x" };
+        internal static readonly string[] PaceNames = { "0.7x", "0.8x", "0.9x", "Обычно", "1.1x", "1.2x", "1.3x", "1.4x", "1.5x" };
         internal static readonly int[] Amounts = { 0, 5, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100 };
-        internal static readonly string[] AmountNames = { "Off", "5%", "10%", "15%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" };
-        internal const string StyleLine = "How do I sound now, choom?";
+        internal static readonly string[] AmountNames = { "Выкл", "5%", "10%", "15%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" };
+        internal const string StyleLine = "Как я теперь звучу, чумба?";
         private readonly List<MenuItem> pitchPicks = new List<MenuItem>();
         private readonly List<MenuItem> pacePicks = new List<MenuItem>();
         private readonly List<MenuItem> robotPicks = new List<MenuItem>();
@@ -463,6 +463,7 @@ namespace CapriDesktop
             fresh = Program.Smoke == null && !File.Exists(Path.Combine(folder, "cross.json"));
             Saved = Program.Smoke != null ? new Settings() : Load();
             StartCare();
+            StartRussian();
             // Security, like Windows: Mac and Linux have the first five toggles' features, and settings from before it get Trusted.
             // Her mouse and keyboard jobs too, once /dev/uinput lets her make her own (Fingers). The smoke test keeps the five.
             fingers = Program.Smoke == null && Fingers.Problem == null;
@@ -613,6 +614,7 @@ namespace CapriDesktop
                     int ticket = asking;
                     DispatcherTimer.RunOnce(() => Greet(ticket, DateTime.Now.Hour), TimeSpan.FromMilliseconds(1800));
                     if (fresh) { OpenMainframe(); meetAt = Now + 4; }
+                    StartListening();
                 }
             };
         }
@@ -798,6 +800,7 @@ namespace CapriDesktop
             CheckRaised(now);
             CheckKeepAwake();
             if (Program.Smoke == null) CheckHabits(now);
+            if (Program.Smoke == null) CheckReminders(now);
             if (away && !IsVisible)
             {
                 Talk.Gone();
@@ -838,10 +841,10 @@ namespace CapriDesktop
         {
             get
             {
-                if (away) return "Taking a break";
-                if (!Talk.Quiet) return "Chatting";
-                if (clip == dance || clip == perchDance) return musicOn ? "Dancing to music" : "Dancing";
-                if (clip == sleep) return "Asleep";
+                if (away) return "На перерыве";
+                if (!Talk.Quiet) return "Болтает";
+                if (clip == dance || clip == perchDance) return musicOn ? "Танцует под музыку" : "Танцует";
+                if (clip == sleep) return "Спит";
                 return "Plugged in";
             }
         }
@@ -883,7 +886,7 @@ namespace CapriDesktop
             string[] lines = new string[0];
             try { if (Brain.LogPath != null && File.Exists(Brain.LogPath)) lines = File.ReadAllLines(Brain.LogPath); } catch (IOException) { }
             int from = Math.Max(0, lines.Length - 25);
-            return head + Environment.NewLine + (lines.Length == 0 ? "No errors logged." : string.Join(Environment.NewLine, lines, from, lines.Length - from));
+            return head + Environment.NewLine + (lines.Length == 0 ? "Ошибок нет." : string.Join(Environment.NewLine, lines, from, lines.Length - from));
         }
 
         private void CheckUpdate()
@@ -999,7 +1002,7 @@ namespace CapriDesktop
             if (board == null) return;
             try { board.SetTextAsync(ErrorDetails()); }
             catch (Exception) { return; }
-            Talk.Answer("(error details)", "Copied my error log. Paste it in the Discord so they can fix me, choom.");
+            Talk.Answer("(error details)", "Скопировала журнал ошибок.");
         }
 
         internal void SetDiscord(bool on)
@@ -1251,7 +1254,7 @@ namespace CapriDesktop
 
         internal bool Hanging { get { return hanging; } }
 
-        internal string HangChoice { get { return hanging ? "Let go" : "Hang here"; } }
+        internal string HangChoice { get { return hanging ? "Отпустить" : "Повиснуть здесь"; } }
 
         private bool Opaque(Point at)
         {
@@ -1355,13 +1358,9 @@ namespace CapriDesktop
 
         internal void Greet(int ticket, int hour)
         {
-            string line = Brain.Greeting(hour);
+            string line = RussianGreeting(hour);
             if (line == null || ticket != asking || outro != null || !Talk.Quiet) return;
-            byte[] hello = Hello(Brain.GreetingClip(hour));
-            if (hello == null) { Reply(++asking, "startup", line); return; }
-            ++asking;
-            Talk.Answer("startup", line, Voice.Seconds(hello));
-            voice.Play(hello);
+            Reply(++asking, "запуск", line);
         }
 
         internal static byte[] Hello(string name)
@@ -1408,7 +1407,7 @@ namespace CapriDesktop
 
         internal void NoVoice()
         {
-            Talk.Answer("(voice)", "Voice chat isn't on Mac and Linux yet. Type to me for now, choom.");
+            ToggleEars();
         }
 
         internal void Grab()
@@ -1454,37 +1453,39 @@ namespace CapriDesktop
         private ContextMenu Menu()
         {
             ContextMenu menu = new ContextMenu { Background = MainframeTheme.Ground, Foreground = MainframeTheme.White, BorderBrush = MainframeTheme.Brim, BorderThickness = new Thickness(1), FontFamily = MainframeTheme.Text, FontSize = MainframeTheme.Size };
-            MenuItem talk = new MenuItem { Header = "Talk to her" };
+            MenuItem talk = new MenuItem { Header = "Написать ей" };
             talk.Click += delegate { Talk.Open(); };
-            quietItem = new MenuItem { Header = "Quiet", ToggleType = MenuItemToggleType.CheckBox };
+            earsItem = new MenuItem { Header = "Слушать «Капри»", ToggleType = MenuItemToggleType.CheckBox, IsChecked = !Saved.EarsOff && Ears.Present };
+            earsItem.Click += delegate { ToggleEars(); };
+            quietItem = new MenuItem { Header = "Тихо", ToggleType = MenuItemToggleType.CheckBox };
             quietItem.Click += delegate { ToggleShush(); };
-            sitItem = new MenuItem { Header = "Sit here" };
+            sitItem = new MenuItem { Header = "Сесть здесь" };
             sitItem.Click += delegate { if (seat != null && seat.Free) StandUp(); else SitHere(); };
-            hangItem = new MenuItem { Header = "Hang here" };
+            hangItem = new MenuItem { Header = "Повиснуть здесь" };
             hangItem.Click += delegate { if (hanging) LetGo(); else HangHere(); };
-            napItem = new MenuItem { Header = "Go to sleep" };
+            napItem = new MenuItem { Header = "Уснуть" };
             napItem.Click += delegate { Nap(!napAsked && clip != sleep); };
-            MenuItem move = new MenuItem { Header = "Move" };
+            MenuItem move = new MenuItem { Header = "Движение" };
             for (int i = 0; i < WanderNames.Length; i++)
             {
                 int level = i;
-                MenuItem pick = new MenuItem { Header = i == 0 ? "Stay put" : "Wander: " + WanderNames[i], ToggleType = MenuItemToggleType.Radio, GroupName = "wander" };
+                MenuItem pick = new MenuItem { Header = i == 0 ? "Стоять на месте" : "Гулять: " + WanderNames[i], ToggleType = MenuItemToggleType.Radio, GroupName = "wander" };
                 pick.Click += delegate { SetWander(level); };
                 wanderPicks.Add(pick);
                 move.Items.Add(pick);
             }
             move.Items.Add(new Separator());
-            musicItem = new MenuItem { Header = "Dance to music", ToggleType = MenuItemToggleType.CheckBox };
+            musicItem = new MenuItem { Header = "Танцевать под музыку", ToggleType = MenuItemToggleType.CheckBox };
             musicItem.Click += delegate { SetDanceToMusic(Saved.NoDance); };
             move.Items.Add(musicItem);
-            danceItem = new MenuItem { Header = "Dance", ToggleType = MenuItemToggleType.CheckBox };
+            danceItem = new MenuItem { Header = "Танцевать", ToggleType = MenuItemToggleType.CheckBox };
             danceItem.Click += delegate { Animate(dancing ? "stop_dancing" : "dance"); };
             move.Items.Add(danceItem);
-            screenItem = new MenuItem { Header = "Go to the next screen" };
+            screenItem = new MenuItem { Header = "На другой экран" };
             screenItem.Click += delegate { MoveSelf("other_screen", null); };
             move.Items.Add(screenItem);
             move.Items.Add(new Separator());
-            MenuItem sleeps = new MenuItem { Header = "Fall asleep after" };
+            MenuItem sleeps = new MenuItem { Header = "Засыпать через" };
             for (int i = 0; i < Sleeps.Length; i++)
             {
                 int seconds = Sleeps[i];
@@ -1494,13 +1495,13 @@ namespace CapriDesktop
                 sleeps.Items.Add(pick);
             }
             move.Items.Add(sleeps);
-            introItem = new MenuItem { Header = "Glitch in at startup", ToggleType = MenuItemToggleType.CheckBox };
+            introItem = new MenuItem { Header = "Эффектное появление при запуске", ToggleType = MenuItemToggleType.CheckBox };
             introItem.Click += delegate { SetIntro(Saved.NoIntro); };
             move.Items.Add(introItem);
-            brainMenu = new MenuItem { Header = "Brain" };
-            brainMenu.Items.Add(new MenuItem { Header = "Looking for models...", IsEnabled = false });
-            MenuItem settings = new MenuItem { Header = "Settings" };
-            MenuItem language = new MenuItem { Header = "Language" };
+            brainMenu = new MenuItem { Header = "Мозг" };
+            brainMenu.Items.Add(new MenuItem { Header = "Ищу модели...", IsEnabled = false });
+            MenuItem settings = new MenuItem { Header = "Настройки" };
+            MenuItem language = new MenuItem { Header = "Язык" };
             for (int i = 0; i < Brain.Languages.GetLength(0); i++)
             {
                 string name = Brain.Languages[i, 1];
@@ -1509,8 +1510,8 @@ namespace CapriDesktop
                 languagePicks.Add(pick);
                 language.Items.Add(pick);
             }
-            MenuItem replies = new MenuItem { Header = "Reply length" };
-            MenuItem recall = new MenuItem { Header = "Chat memory" };
+            MenuItem replies = new MenuItem { Header = "Длина ответов" };
+            MenuItem recall = new MenuItem { Header = "Память чата" };
             for (int i = 0; i < Lengths.Length; i++)
             {
                 int level = i;
@@ -1523,7 +1524,7 @@ namespace CapriDesktop
                 recallPicks.Add(keep);
                 recall.Items.Add(keep);
             }
-            MenuItem sounds = new MenuItem { Header = "Sounds" };
+            MenuItem sounds = new MenuItem { Header = "Звуки" };
             for (int i = 0; i < SoundNames.Length; i++)
             {
                 int level = SoundLevels[i];
@@ -1533,29 +1534,29 @@ namespace CapriDesktop
                 sounds.Items.Add(pick);
             }
             sounds.Items.Add(new Separator());
-            typingItem = new MenuItem { Header = "Typing sound", ToggleType = MenuItemToggleType.CheckBox };
+            typingItem = new MenuItem { Header = "Звук печати", ToggleType = MenuItemToggleType.CheckBox };
             typingItem.Click += delegate { SetTyping(!TypingSound); };
             sounds.Items.Add(typingItem);
-            MenuItem notes = new MenuItem { Header = "Open her notes (me.md)" };
+            MenuItem notes = new MenuItem { Header = "Открыть её заметки (me.md)" };
             notes.Click += delegate { OpenNotes(); };
-            MenuItem personality = new MenuItem { Header = "Edit her personality (personality.md)" };
+            MenuItem personality = new MenuItem { Header = "Изменить характер (personality.md)" };
             personality.Click += delegate { OpenPersonality(); };
-            MenuItem resetPersonality = new MenuItem { Header = "Reset her personality to default" };
+            MenuItem resetPersonality = new MenuItem { Header = "Сбросить характер" };
             resetPersonality.Click += delegate { ResetPersonality(); };
-            memoriesItem = new MenuItem { Header = "Remember our chats", ToggleType = MenuItemToggleType.CheckBox };
+            memoriesItem = new MenuItem { Header = "Помнить наши чаты", ToggleType = MenuItemToggleType.CheckBox };
             memoriesItem.Click += delegate { SetRemembering(Saved.NoMemories); };
-            MenuItem memories = new MenuItem { Header = "Open her memories (memories.md)" };
+            MenuItem memories = new MenuItem { Header = "Открыть воспоминания (memories.md)" };
             memories.Click += delegate { OpenMemories(); };
-            MenuItem nickname = new MenuItem { Header = "What should she call you?" };
+            MenuItem nickname = new MenuItem { Header = "Как ей тебя называть?" };
             nickname.Click += delegate { AskNickname(); };
             settings.Items.Add(nickname);
-            MenuItem meet = new MenuItem { Header = "Get to know me" };
+            MenuItem meet = new MenuItem { Header = "Познакомиться" };
             meet.Click += delegate { GetToKnow(); };
             settings.Items.Add(meet);
             settings.Items.Add(language);
             settings.Items.Add(replies);
             settings.Items.Add(recall);
-            MenuItem bubble = new MenuItem { Header = "Bubble" };
+            MenuItem bubble = new MenuItem { Header = "Облачко" };
             for (int i = 0; i < BubbleNames.Length; i++)
             {
                 int level = i;
@@ -1566,9 +1567,9 @@ namespace CapriDesktop
             }
             settings.Items.Add(bubble);
             settings.Items.Add(sounds);
-            voiceMenu = new MenuItem { Header = "Voice" };
+            voiceMenu = new MenuItem { Header = "Голос" };
             settings.Items.Add(voiceMenu);
-            MenuItem volume = new MenuItem { Header = "Volume" };
+            MenuItem volume = new MenuItem { Header = "Громкость" };
             for (int i = 0; i < Volumes.Length; i++)
             {
                 int percent = Volumes[i];
@@ -1645,10 +1646,10 @@ namespace CapriDesktop
                 style.Items.Add(layerDelay);
             }
             settings.Items.Add(style);
-            checkInsItem = new MenuItem { Header = "Check in on me", ToggleType = MenuItemToggleType.CheckBox };
+            checkInsItem = new MenuItem { Header = "Заботиться обо мне", ToggleType = MenuItemToggleType.CheckBox };
             checkInsItem.Click += delegate { SetCheckIns(Saved.NoCheckIns); };
             settings.Items.Add(checkInsItem);
-            MenuItem pops = new MenuItem { Header = "Pop-ins" };
+            MenuItem pops = new MenuItem { Header = "Появления" };
             for (int i = 0; i < PopNames.Length; i++)
             {
                 int pace = i;
@@ -1658,13 +1659,13 @@ namespace CapriDesktop
                 pops.Items.Add(pick);
             }
             settings.Items.Add(pops);
-            onTopItem = new MenuItem { Header = "Always on top", ToggleType = MenuItemToggleType.CheckBox };
+            onTopItem = new MenuItem { Header = "Поверх всех окон", ToggleType = MenuItemToggleType.CheckBox };
             onTopItem.Click += delegate { SetOnTop(Saved.NotOnTop); };
             settings.Items.Add(onTopItem);
-            watchItem = new MenuItem { Header = "Watch my screen", ToggleType = MenuItemToggleType.CheckBox };
+            watchItem = new MenuItem { Header = "Смотреть мой экран", ToggleType = MenuItemToggleType.CheckBox };
             watchItem.Click += delegate { SetWatch(!Saved.Watch); };
             settings.Items.Add(watchItem);
-            MenuItem gaps = new MenuItem { Header = "Glance every" };
+            MenuItem gaps = new MenuItem { Header = "Смотреть каждые" };
             for (int i = 0; i < GlanceGaps.Length; i++)
             {
                 int seconds = GlanceGaps[i];
@@ -1674,13 +1675,13 @@ namespace CapriDesktop
                 gaps.Items.Add(pick);
             }
             settings.Items.Add(gaps);
-            caughtUpItem = new MenuItem { Header = "Keep her caught up", ToggleType = MenuItemToggleType.CheckBox };
+            caughtUpItem = new MenuItem { Header = "Держать в курсе", ToggleType = MenuItemToggleType.CheckBox };
             caughtUpItem.Click += delegate { SetCaughtUp(Saved.NoCaughtUp); };
             settings.Items.Add(caughtUpItem);
-            loginItem = new MenuItem { Header = "Start at login", ToggleType = MenuItemToggleType.CheckBox };
+            loginItem = new MenuItem { Header = "Запускать при входе", ToggleType = MenuItemToggleType.CheckBox };
             loginItem.Click += delegate { SetLogin(!StartsAtLogin); };
             settings.Items.Add(loginItem);
-            discordItem = new MenuItem { Header = "Show on Discord", ToggleType = MenuItemToggleType.CheckBox };
+            discordItem = new MenuItem { Header = "Показывать в Discord", ToggleType = MenuItemToggleType.CheckBox };
             discordItem.Click += delegate { SetDiscord(Saved.NoDiscord); };
             settings.Items.Add(discordItem);
             // Security, like Windows' SECURITY window (Lachy, 29 Oct): Lockdown, Guarded, Trusted and Blackwall set the toggles
@@ -1723,7 +1724,7 @@ namespace CapriDesktop
             settings.Items.Add(resetPersonality);
             settings.Items.Add(memoriesItem);
             settings.Items.Add(memories);
-            MenuItem sizes = new MenuItem { Header = "Size" };
+            MenuItem sizes = new MenuItem { Header = "Размер" };
             for (int i = 0; i < Sizes.Length; i++)
             {
                 double size = Sizes[i];
@@ -1733,14 +1734,14 @@ namespace CapriDesktop
             }
             MenuItem discord = new MenuItem { Header = "Join the Discord" };
             discord.Click += delegate { Browse(DiscordPage); };
-            MenuItem help = new MenuItem { Header = "Help" };
-            MenuItem helpPage = new MenuItem { Header = "Help page" };
+            MenuItem help = new MenuItem { Header = "Помощь" };
+            MenuItem helpPage = new MenuItem { Header = "Страница помощи" };
             helpPage.Click += delegate { Browse(HelpPage); };
-            MenuItem copyErrors = new MenuItem { Header = "Copy error details" };
+            MenuItem copyErrors = new MenuItem { Header = "Скопировать ошибки" };
             copyErrors.Click += delegate { CopyErrors(); };
             help.Items.Add(helpPage);
             help.Items.Add(copyErrors);
-            MenuItem quit = new MenuItem { Header = "Quit Capri" };
+            MenuItem quit = new MenuItem { Header = "Выйти из Капри" };
             quit.Click += delegate { Quit(); };
             move.Items.Clear();
             move.Items.Add(sitItem);
@@ -1748,17 +1749,23 @@ namespace CapriDesktop
             move.Items.Add(napItem);
             move.Items.Add(screenItem);
             move.Items.Add(danceItem);
-            MenuItem wander = new MenuItem { Header = "Wander" };
+            MenuItem wander = new MenuItem { Header = "Гулять" };
             wander.Click += delegate { SetWander(Saved.Wander == 0 ? 2 : 0); };
             move.Items.Add(wander);
             MenuItem title = new MenuItem { Header = "CAPRI / v" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString(3), IsEnabled = false, Foreground = MainframeTheme.Rose };
-            MenuItem frame = new MenuItem { Header = "Open Capri Mainframe" };
+            MenuItem frame = new MenuItem { Header = "Открыть Мейнфрейм" };
             frame.Click += delegate { OpenMainframe(); };
-            hideItem = new MenuItem { Header = "Hide Capri" };
+            hideItem = new MenuItem { Header = "Спрятать Капри" };
             hideItem.Click += delegate { if (Away) ComeBack(); else HideAway(); };
-            MenuItem update = new MenuItem { Header = "Check for updates" };
+            MenuItem update = new MenuItem { Header = "Проверить обновления" };
             update.Click += delegate { CheckUpdate(); };
+            MenuItem deepseek = new MenuItem { Header = "Ключ DeepSeek..." };
+            deepseek.Click += delegate { AskBrainKey(); };
             menu.Items.Add(title);
+            menu.Items.Add(new Separator());
+            menu.Items.Add(talk);
+            menu.Items.Add(earsItem);
+            menu.Items.Add(deepseek);
             menu.Items.Add(new Separator());
             menu.Items.Add(frame);
             menu.Items.Add(hideItem);
@@ -1768,7 +1775,7 @@ namespace CapriDesktop
             menu.Items.Add(update);
             menu.Items.Add(new Separator());
             menu.Items.Add(quit);
-            menu.Opening += delegate { Sync(); hideItem.Header = Away ? "Show Capri" : "Hide Capri"; };
+            menu.Opening += delegate { Sync(); hideItem.Header = Away ? "Показать Капри" : "Спрятать Капри"; earsItem.IsChecked = Listening; };
             return menu;
         }
 
@@ -1826,7 +1833,7 @@ namespace CapriDesktop
                 string[] pitchNames = new string[LayerPitches.Length], delayNames = new string[LayerDelays.Length];
                 for (int i = 0; i < pitchNames.Length; i++) pitchNames[i] = VoiceFx.Layering.PitchName(LayerPitches[i]);
                 for (int i = 0; i < delayNames.Length; i++) delayNames[i] = VoiceFx.Layering.DelayName(LayerDelays[i]);
-                return (layersItem.IsChecked == true ? "On" : "Off") + " | " + Ticked(layerPitchPicks[0], pitchNames) + ", " + Ticked(layerDelayPicks[0], delayNames) + " | " + Ticked(layerPitchPicks[1], pitchNames) + ", " + Ticked(layerDelayPicks[1], delayNames);
+                return (layersItem.IsChecked == true ? "Вкл" : "Выкл") + " | " + Ticked(layerPitchPicks[0], pitchNames) + ", " + Ticked(layerDelayPicks[0], delayNames) + " | " + Ticked(layerPitchPicks[1], pitchNames) + ", " + Ticked(layerDelayPicks[1], delayNames);
             }
         }
 
@@ -1968,8 +1975,8 @@ namespace CapriDesktop
         }
 
         // Sit here, or Stand up while she sits where she was put, like Windows' Move menu.
-        internal string SitChoice { get { return seat != null && seat.Free ? "Stand up" : "Sit here"; } }
-        internal string NapChoice { get { return napAsked || clip == sleep ? "Wake up" : "Go to sleep"; } }
+        internal string SitChoice { get { return seat != null && seat.Free ? "Встать" : "Сесть здесь"; } }
+        internal string NapChoice { get { return napAsked || clip == sleep ? "Проснуться" : "Уснуть"; } }
 
         internal int SleepAfter { get { return Saved.SleepAfter ?? 120; } }
 
@@ -2040,7 +2047,7 @@ namespace CapriDesktop
             Play(wake);
         }
 
-        // "Go to sleep" from her menu, her brain or plain words, like on Windows: she gets down off her window, finishes what
+        // "Уснуть" from her menu, her brain or plain words, like on Windows: she gets down off her window, finishes what
         // she's saying, then sleeps standing. Unlike the doze she falls into by herself, the mouse and keyboard don't wake her.
         internal string Nap(bool sleeping)
         {
@@ -2051,7 +2058,7 @@ namespace CapriDesktop
                 napping = false;
                 if (clip == sleep) Wake();
                 Sync();
-                return resting ? "Woke up." : "Already awake.";
+                return resting ? "Проснулась." : "Я и так не сплю.";
             }
             ComeBack();
             if (seat != null || hanging) StandUp();
@@ -2059,7 +2066,7 @@ namespace CapriDesktop
             dancing = false;
             napAsked = true;
             Sync();
-            return "Going to sleep. A click on me wakes me up.";
+            return "Сплю. Кликни по мне, чтобы разбудить.";
         }
 
         // Her nap tool, which her brain calls from its own thread.
@@ -2087,16 +2094,16 @@ namespace CapriDesktop
             if (action == "move_mainframe") return MoveMainframe(screen);
             if (action == "hide")
             {
-                if (away) return "Already hidden.";
+                if (away) return "Я уже спряталась.";
                 hideAsked = true;
-                return "Hiding. Pick Show Capri in my tray menu to bring me back.";
+                return "Прячусь. Чтобы вернуть, выбери «Показать Капри» в меню значка.";
             }
             hideAsked = false;
             if (action == "show")
             {
-                if (!away) return "I'm right here.";
+                if (!away) return "Я тут.";
                 ComeBack();
-                return "Back.";
+                return "Вернулась.";
             }
             napAsked = false;
             napping = false;
@@ -2105,14 +2112,14 @@ namespace CapriDesktop
                 PixelPoint? mouse = MouseAt != null ? MouseAt() : Mouse();
                 if (mouse == null) return "Couldn't find your mouse on this desktop.";
                 Teleport(mouse.Value);
-                return "Teleporting to your mouse.";
+                return "Телепортируюсь к курсору.";
             }
             if (action == "other_screen")
             {
                 IReadOnlyList<Screen> all = Screens.All;
                 Screen from = ScreenHere();
                 int to = PickScreen(all, from, screen);
-                if (to < 0) return all.Count < 2 ? "There's no other screen to go to." : "There's no screen like that to go to.";
+                if (to < 0) return all.Count < 2 ? "Другого экрана нет." : "There's no screen like that to go to.";
                 if (from != null && all[to].Bounds == from.Bounds) return "I'm already on " + ScreenName(all, to) + ".";
                 Teleport(Across(Hip, from != null ? from.WorkingArea : Area, all[to].WorkingArea));
                 return "Moving to " + ScreenName(all, to) + ".";
@@ -2120,24 +2127,24 @@ namespace CapriDesktop
             ComeBack();
             if (action == "sit")
             {
-                if (seat != null && seat.Free) return "Already sitting.";
+                if (seat != null && seat.Free) return "Уже сижу.";
                 SitHere();
-                return "Sitting right here.";
+                return "Сижу тут.";
             }
             if (action == "stand_up")
             {
-                if (hanging) { LetGo(); return "Let go."; }
-                if (seat == null) return "Already standing.";
+                if (hanging) { LetGo(); return "Отпустила."; }
+                if (seat == null) return "Уже стою.";
                 StandUp();
-                return "Standing up.";
+                return "Встаю.";
             }
             if (action == "hang")
             {
-                if (hanging) return "Already hanging.";
+                if (hanging) return "Уже вишу.";
                 HangHere();
-                return "Hanging right here.";
+                return "Вишу тут.";
             }
-            return "Couldn't move like that.";
+            return "Так подвинуться не могу.";
         }
 
         private string MoveTool(string action, string screen) { return Dispatcher.UIThread.CheckAccess() ? MoveSelf(action, screen) : Dispatcher.UIThread.Invoke(new Func<string>(delegate { return MoveSelf(action, screen); })); }
@@ -2217,7 +2224,7 @@ namespace CapriDesktop
                 danceHeld = musicOn;
                 Dancing = false;
                 if (clip == dance || clip == perchDance) Play(clip == perchDance ? perch : idle);
-                return was ? "Stopped dancing." : "I wasn't dancing.";
+                return was ? "Больше не танцую." : "Я и не танцевала.";
             }
             napAsked = false;
             napping = false;
@@ -2227,7 +2234,7 @@ namespace CapriDesktop
             {
                 danceHeld = false;
                 Dancing = true;
-                return "Dancing. Tell me to stop when you've had enough.";
+                return "Танцую. Скажи, когда хватит.";
             }
             bool perched = seat != null;
             if (name == "idle")
@@ -2249,7 +2256,7 @@ namespace CapriDesktop
                 blinkWith = perched ? perchBlink : blink;
             }
             else return "I don't have an animation called " + name + ".";
-            return name == "idle" ? "Back to my idle." : name == "glitch" ? "Glitched." : name == "grin" ? "Grinning." : "Blinked.";
+            return name == "idle" ? "Обычный режим." : name == "glitch" ? "Глитч." : name == "grin" ? "Улыбаюсь." : "Моргнула.";
         }
 
         private string AnimateTool(string name) { return Dispatcher.UIThread.CheckAccess() ? Animate(name) : Dispatcher.UIThread.Invoke(new Func<string>(delegate { return Animate(name); })); }
@@ -2382,7 +2389,7 @@ namespace CapriDesktop
         internal string SetLevel(string name, int step)
         {
             if (!Dispatcher.UIThread.CheckAccess()) return Dispatcher.UIThread.InvokeAsync(delegate { return SetLevel(name, step); }).GetAwaiter().GetResult();
-            if (!Hands.CrossSetting(name)) return "That Capri setting is only on Windows for now.";
+            if (!Hands.CrossSetting(name)) return "Эта настройка пока есть только на Windows.";
             step = Hands.ClampLevel(name, step);
             if (step < 0) return null;
             int careKind = Array.IndexOf(Hands.CareSettings, name);
@@ -2426,7 +2433,7 @@ namespace CapriDesktop
         internal string SettingAction(string action)
         {
             if (!Dispatcher.UIThread.CheckAccess()) return Dispatcher.UIThread.InvokeAsync(delegate { return SettingAction(action); }).GetAwaiter().GetResult();
-            if (action != "preview_voice") return "That action is only on Windows for now.";
+            if (action != "preview_voice") return "Это пока работает только на Windows.";
             if (!Speaks) return "My voice isn't ready. Set it up under VOICE in Capri Mainframe first.";
             styleCheckDue = true;
             styleAsked = asking;
@@ -2448,7 +2455,7 @@ namespace CapriDesktop
             nextGlance = -1;
             ForgetNudges();
             if (shushed) voice.Stop();
-            if (say) Talk.Answer("(quiet)", shushed ? "Going quiet. Turn off Mute her in Capri Mainframe when you want me back." : "I'm back, choom.");
+            if (say) Talk.Answer("(quiet)", shushed ? "Going quiet. Turn off Mute her in Capri Mainframe when you want me back." : "Я вернулась, чумба.");
             Sync();
             if (ShushChanged != null) ShushChanged();
         }
@@ -2471,8 +2478,8 @@ namespace CapriDesktop
                 List<string> on = new List<string>();
                 foreach (List<MenuItem> group in new[] { wanderPicks, languagePicks, replyPicks, recallPicks, soundPicks })
                     foreach (MenuItem pick in group) if (pick.IsChecked) on.Add(pick.Header.ToString());
-                if (musicItem.IsChecked) on.Add("Dance to music");
-                if (danceItem.IsChecked) on.Add("Dance");
+                if (musicItem.IsChecked) on.Add("Танцевать под музыку");
+                if (danceItem.IsChecked) on.Add("Танцевать");
                 return string.Join(" | ", on);
             }
         }
@@ -2565,7 +2572,7 @@ namespace CapriDesktop
         internal void AskNickname()
         {
             ComeBack();
-            Talk.AskFor(NameHeard, Brain.Nickname == null ? "What should I call you? Type a name and press Enter." : "I call you " + Brain.Nickname + ". Type a new name and press Enter, or choom to go back.", SetNickname);
+            Talk.AskFor(NameHeard, Brain.Nickname == null ? "Как тебя называть? Напиши имя и нажми Enter." : "I call you " + Brain.Nickname + ". Type a new name and press Enter, or choom to go back.", SetNickname);
         }
 
         internal void SetNickname(string typed)
@@ -3032,7 +3039,7 @@ namespace CapriDesktop
                     Brain.GetServer(out currentServer, out currentKey);
                     if (MainframeTier == 0 && Brain.Remote == null && currentServer == null) Brain.Model = tag;
                     Save();
-                    Talk.Answer(BrainHeard, "My brain's in. Talk to me, choom.");
+                    Talk.Answer(BrainHeard, "Мозг подключён. Говори со мной, чумба.");
                 });
             });
         }
@@ -3719,6 +3726,14 @@ namespace CapriDesktop
             if (text.Length == 0) return;
             Typed();
             if (meeting.Asking) { Met(text); return; }
+            string quick;
+            if (QuickRussian(text, out quick))
+            {
+                int quickTicket = ++asking;
+                Brain.Remember(text, quick);
+                Reply(quickTicket, text, quick);
+                return;
+            }
             int ticket = ++asking;
             Brain.Cancel();
             voice.Stop();
@@ -3771,9 +3786,9 @@ namespace CapriDesktop
                 string after = null;
                 bool stuck = false;
                 try { said = think == null ? Brain.Ask(text, follows, out after) : think(text); }
-                catch (BrainException error) { said = error.Message == Brain.Offline ? Offline : error.Told ? error.Message : "My brain couldn't answer: " + error.Message; stuck = Brain.Stalled(error); }
-                catch (Exception error) { said = Brain.Explain(error, remote) ?? "That reply was cancelled. Try again."; stuck = Brain.Stalled(error); }
-                if (string.IsNullOrWhiteSpace(said)) said = "My brain sent an empty reply. Try again.";
+                catch (BrainException error) { said = error.Message == Brain.Offline ? Offline : error.Told ? error.Message : "Мой мозг не смог ответить: " + error.Message; stuck = Brain.Stalled(error); }
+                catch (Exception error) { said = Brain.Explain(error, remote) ?? "Ответ отменён. Попробуй ещё раз."; stuck = Brain.Stalled(error); }
+                if (string.IsNullOrWhiteSpace(said)) said = "Мозг прислал пустой ответ. Попробуй ещё раз.";
                 Dispatcher.UIThread.Post(delegate
                 {
                     if (ticket != asking) return;
@@ -3831,8 +3846,9 @@ namespace CapriDesktop
             }
         }
 
-        private void Reply(int ticket, string heard, string said, string after = null, bool following = false)
+        private void Reply(int ticket, string heard, string said, string after = null, bool following = false, bool russian = false)
         {
+            if (!russian && Russify(ticket, heard, said, after, following)) return;
             int input = inputTurn, answer = answerTurn;
             followUp.Drop();
             if (!Speaks || Voice.Spoken(said).Length == 0) { if (ShowReply(ticket, heard, said, 0, after, following, input, answer)) TypeAlong(said, ticket); return; }
@@ -3956,7 +3972,7 @@ namespace CapriDesktop
                     using (StreamWriter writer = new StreamWriter(stream)) writer.Write(key);
                 }
             }
-            catch (Exception error) { Brain.Log(path, -1, "Couldn't save the " + what + ": " + error.Message); }
+            catch (Exception error) { Brain.Log(path, -1, "Не получилось сохранить " + what + ": " + error.Message); }
         }
 
         // NVIDIA's page takes the focus, which would close her key box, so she says where to paste the key instead.
@@ -3970,7 +3986,7 @@ namespace CapriDesktop
         internal void AskBrainKey()
         {
             ComeBack();
-            Talk.AskKey(BrainKeyHeard, "Paste your NVIDIA, OpenAI, Claude or DeepSeek API key and press Enter. It stays on this computer. A free NVIDIA key works.", SaveBrainKey);
+            Talk.AskKey(BrainKeyHeard, "Вставь свой API-ключ DeepSeek (начинается с sk-) и нажми Enter. Он хранится только на этом Mac.", SaveBrainKey);
         }
 
         // A key she checks by reading its models, then thinks with on its best chat model until they pick another under Brain.
@@ -3998,17 +4014,17 @@ namespace CapriDesktop
                 string company = new Cloud(key, null).Company;
                 try { found = Brain.CloudModels(key, pickedTier == 1); }
                 catch (BrainException error) { problem = error.Message; }
-                catch (Exception error) { Brain.Log(company + " models", -1, error.Message); problem = "Couldn't reach " + company + ". Check your internet, then paste the key again."; }
+                catch (Exception error) { Brain.Log(company + " models", -1, error.Message); problem = "Не достучалась до " + company + ". Проверь интернет и вставь ключ ещё раз."; }
                 Dispatcher.UIThread.Post(delegate
                 {
                     brainPending--;
                     if (request != brainRequests) { NotifySettings(); return; }
                     string model = found == null ? null : Brain.DefaultCloudModel(kind, found);
-                    if (problem == null && model == null) problem = "That key can't use any chat models.";
+                    if (problem == null && model == null) problem = "С этим ключом нет доступных моделей.";
                     if (problem != null) { frameProblem = problem; NotifySettings(); if (ticket == asking) Talk.Answer(BrainKeyHeard, problem); return; }
                     UseCloud(key, model, found, pickedTier);
                     WriteSecret(BrainKeyFile, key, "brain key");
-                    if (ticket == asking) Talk.Answer(BrainKeyHeard, "Key saved. I'm thinking with " + model + " now. Change it under BRAIN in Capri Mainframe.");
+                    if (ticket == asking) Talk.Answer(BrainKeyHeard, "Ключ сохранён. Думаю с помощью " + model + ". Поменять можно в Мейнфрейме → МОЗГ.");
                 });
             });
         }
@@ -4274,9 +4290,9 @@ namespace CapriDesktop
             if (voiceMenu == null) return;
             voiceMenu.Items.Clear();
             string picked = Speakers.Known(Saved.VoiceProvider);
-            MenuItem provider = new MenuItem { Header = "Provider: " + (picked == Speakers.Local ? localVoice.Name : picked == Speakers.Off ? "Off" : "ElevenLabs") };
+            MenuItem provider = new MenuItem { Header = "Provider: " + (picked == Speakers.Local ? localVoice.Name : picked == Speakers.Off ? "Выкл" : "ElevenLabs") };
             string[] pickable = { Speakers.ElevenLabs, Speakers.Local, Speakers.Off };
-            string[] pickNames = { "ElevenLabs", localVoice.Name + " (OpenAI speech API)", "Off" };
+            string[] pickNames = { "ElevenLabs", localVoice.Name + " (OpenAI speech API)", "Выкл" };
             for (int i = 0; i < pickable.Length; i++)
             {
                 string one = pickable[i];
@@ -4466,6 +4482,7 @@ namespace CapriDesktop
         {
             if (quitting) return;
             quitting = true;
+            ears.Stop();
             StopAwake();
             CloseMainframe();
             Brain.Cancel();
