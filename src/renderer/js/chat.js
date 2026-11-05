@@ -1006,6 +1006,19 @@ export class Chat {
         this.zap();
         return value && (await this.host.webSearch(value)) ? { line: fmt(t.web, { query: value }), face: 'smug' } : null;
       }
+      case 'vpn': {
+        // [[vpn: on]], [[vpn: off]], [[vpn: status]], or with its name: [[vpn: on Red Shield]]
+        const m = /^(on|off|status|вкл\S*|выкл\S*)\s*(.*)$/i.exec(value) || [null, 'on', value];
+        const what = /^(off|выкл)/i.test(m[1]) ? 'off' : /^status/i.test(m[1]) ? 'status' : 'on';
+        this.zap();
+        const r = await pc({ action: 'vpn', what, name: m[2] || '' });
+        this.host.log?.(`vpn ${what}: ${JSON.stringify(r)}`);
+        if (!r) return { line: 'Не смогла дотянуться до VPN.', face: 'aside' };
+        if (r.none) return { line: 'В системе не вижу ни одного VPN-подключения: твой VPN, похоже, не даёт управлять собой снаружи. Могу только открыть его приложение.', face: 'aside' };
+        if (what === 'status') return { line: `${r.name}: ${r.on ? 'включён' : 'выключен'}.`, face: 'look' };
+        const ok = what === 'on' ? r.on : !r.on;
+        return { line: ok ? `${r.name}: ${what === 'on' ? 'включила' : 'выключила'}.` : `${r.name}: попросила ${what === 'on' ? 'включиться' : 'выключиться'}, сейчас статус «${r.status}».`, face: ok ? 'smug' : 'aside' };
+      }
       case 'images':
       case 'youtube':
       case 'maps':
@@ -1042,6 +1055,7 @@ export class Chat {
       + '[[settings: PAGE]] PAGE: bluetooth, sound, wifi, network, update, display, notifications, mouse, battery, background, storage\n'
       + '[[theme: dark]] or [[theme: light]]; [[snip]] a screenshot of an area; [[screenshot]] of the whole screen; [[tidy]] hide all windows, [[untidy]] bring them back\n'
       + '[[info: battery]], [[info: disk]], [[info: ram]], [[info: ip]] (the numbers show under your answer: don\'t make them up)\n'
+      + '[[vpn: on]], [[vpn: off]], [[vpn: status]] switch their VPN (Red Shield VPN or another set up in the system) on or off, really, like its toggle: "включи впн" = [[vpn: on]]. Never say you can only open the VPN app.\n'
       + '[[power: lock]], [[power: sleep]], [[power: shutdown]], [[power: restart]], [[power: cancel]]\n'
       + '[[search: QUERY]] search Google in their default browser; [[images: QUERY]] search Google Images; [[youtube: QUERY]] search YouTube; [[maps: PLACE]] Google Maps; [[translate: TEXT]] Google Translate; [[files: WORDS]] find the user\'s files by name (results show under your answer)\n'
       + 'Understand what they want done, however they word it, and pick the tags that do it, several if needed. They mean, for example:\n'

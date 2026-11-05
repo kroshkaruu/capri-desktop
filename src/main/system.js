@@ -77,6 +77,39 @@ async function power(action, seconds = 30) {
   return true;
 }
 
+// VPNs set up in the system (System Settings › VPN: Red Shield, WireGuard, Outline, IKEv2…), switched the
+// way their toggle there does: `scutil --nc`. [{ name, status }] with status like 'Connected' or 'Disconnected'.
+const scutil = (args) => new Promise((resolve) => execFile('scutil', args, { timeout: 15000 }, (err, out) => resolve(err ? null : String(out))));
+
+async function vpns() {
+  const out = await scutil(['--nc', 'list']);
+  if (!out) return [];
+  return out.split('\n').map((line) => {
+    const m = /\(([^)]+)\).*?"([^"]+)"/.exec(line);
+    return m ? { status: m[1].trim(), name: m[2] } : null;
+  }).filter(Boolean);
+}
+
+const simple = (t) => String(t || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+
+async function vpn(what = 'status', wanted = '') {
+  const list = await vpns();
+  if (!list.length) return { none: true };
+  const key = simple(wanted);
+  const pick = (key && list.find((v) => simple(v.name).includes(key) || key.includes(simple(v.name))))
+    || list.find((v) => /^connect/i.test(v.status)) || list[0];
+  if (what === 'status') return { name: pick.name, on: /^connected/i.test(pick.status), status: pick.status, all: list.map((v) => v.name) };
+  await scutil(['--nc', what === 'off' ? 'stop' : 'start', pick.name]);
+  // it takes a moment to connect: the status after it
+  let now = pick.status;
+  for (let i = 0; i < 16; i++) {
+    await new Promise((r) => setTimeout(r, 500));
+    now = (await vpns()).find((v) => v.name === pick.name)?.status || now;
+    if (what === 'off' ? /^disconnected/i.test(now) : /^connected/i.test(now)) break;
+  }
+  return { name: pick.name, on: /^connected/i.test(now), status: now };
+}
+
 function act(req = {}) {
   switch (req.action) {
     case 'settings': return settings(String(req.page));
@@ -86,6 +119,7 @@ function act(req = {}) {
     case 'tidy': return tidy(Boolean(req.back));
     case 'theme': return theme(Boolean(req.dark));
     case 'power': return power(String(req.what), Number(req.seconds) || 0);
+    case 'vpn': return vpn(String(req.what || 'status'), String(req.name || ''));
     default: return null;
   }
 }
