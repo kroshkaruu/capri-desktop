@@ -1,0 +1,26 @@
+total 292
+drwxr-xr-x 2 runner runner   4096 Nov  5 20:34 .
+drwxr-xr-x 3 runner runner   4096 Nov  5 20:34 ..
+-rwxr-xr-x 1 runner runner 252672 Nov  5 20:34 capri-helper
+-rw-r--r-- 1 runner runner  33453 Nov  5 20:34 capri-helper.swift
+total 4264
+drwxr-xr-x  2 runner runner    4096 Nov  5 20:34 .
+drwxr-xr-x 16 runner runner    4096 Nov  5 20:34 ..
+-rwxr-xr-x  1 runner runner 3824448 Nov  5 20:34 agent-desktop
+-rwxr-xr-x  1 runner runner  529616 Nov  5 20:34 agent-desktop-macos-helper
+  npm audit fix --force
+
+Run `npm audit` for details.
+  • electron-builder  version=26.18.0 os=7.0.0-1017-azure
+  • loaded configuration  file=package.json ("build" field)
+  • executing @electron/rebuild  electronVersion=44.9.3 arch=arm64 buildFromSource=false workspaceRoot=/home/runner/work/capri-desktop/capri-desktop projectDir=./ appDir=./
+  • installing native dependencies  arch=arm64
+  • completed installing native dependencies
+  • packaging       platform=darwin arch=arm64 electron=44.9.3 appOutDir=dist/mac-arm64
+  • downloaded      label=electron progress=100%
+  • downloaded electron zip extracted successfully  output=/home/runner/work/capri-desktop/capri-desktop/dist/mac-arm64
+  • searching for node modules  pm=npm searchDir=/home/runner/work/capri-desktop/capri-desktop
+  • skipped macOS application code signing  reason=supported only on macOS
+builder-debug.yml
+mac-arm64
+-rw-r--r-- 1 runner runner 172907029 Nov  5 20:35 Capri-Mac-RU.zip
