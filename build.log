@@ -1,0 +1,48 @@
+total 646744
+drwxr-xr-x 3 runner runner     12288 Nov  5 09:21 .
+drwxr-xr-x 5 runner runner      4096 Nov  5 09:21 ..
+-rwxr-xr-x 1 runner runner    124712 Nov  5 09:21 CapriEars
+-rw-r--r-- 1 runner runner     28504 Nov  5 09:21 CapriEars.deps.json
+-rw-r--r-- 1 runner runner     16384 Nov  5 09:21 CapriEars.dll
+-rw-r--r-- 1 runner runner       465 Nov  5 09:21 CapriEars.runtimeconfig.json
+-rwxr--r-- 1 runner runner    892712 Oct 22 21:37 Microsoft.CSharp.dll
+-rwxr--r-- 1 runner runner    503840 Jan 13  2026 Microsoft.Extensions.AI.Abstractions.dll
+-rwxr--r-- 1 runner runner   1334568 Oct 22 21:37 Microsoft.VisualBasic.Core.dll
+-rwxr--r-- 1 runner runner     17192 Oct 22 21:26 Microsoft.VisualBasic.dll
+-rwxr--r-- 1 runner runner     15656 Oct 22 21:24 Microsoft.Win32.Primitives.dll
+-rwxr--r-- 1 runner runner     34600 Oct 22 21:37 Microsoft.Win32.Registry.dll
+-rwxr--r-- 1 runner runner     15144 Oct 22 21:26 System.AppContext.dll
+-rwxr--r-- 1 runner runner     15184 Oct 22 21:26 System.Buffers.dll
+-rwxr--r-- 1 runner runner    254248 Oct 22 21:37 System.Collections.Concurrent.dll
+-rwxr--r-- 1 runner runner   1116968 Oct 22 21:37 System.Collections.Immutable.dll
+-rwxr--r-- 1 runner runner    104232 Oct 22 21:37 System.Collections.NonGeneric.dll
+-rwxr--r-- 1 runner runner    105256 Oct 22 21:37 System.Collections.Specialized.dll
+-rwxr--r-- 1 runner runner    328528 Oct 22 21:37 System.Collections.dll
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+  • electron-builder  version=26.18.0 os=7.0.0-1017-azure
+  • Implicit publishing triggered by CI detection. This behavior will be disabled in electron-builder v27. Please use --publish explicitly.
+  • loaded configuration  file=package.json ("build" field)
+  • executing @electron/rebuild  electronVersion=44.9.3 arch=arm64 buildFromSource=false workspaceRoot=/home/runner/work/capri-desktop/capri-desktop projectDir=./ appDir=./
+  • installing native dependencies  arch=arm64
+  • completed installing native dependencies
+  • packaging       platform=darwin arch=arm64 electron=44.9.3 appOutDir=dist/mac-arm64
+  • downloaded      label=electron progress=100%
+  • downloaded electron zip extracted successfully  output=/home/runner/work/capri-desktop/capri-desktop/dist/mac-arm64
+  • searching for node modules  pm=npm searchDir=/home/runner/work/capri-desktop/capri-desktop
+  • downloaded      label=icons-bundle.tar.gz progress=100%
+  • skipped macOS application code signing  reason=supported only on macOS
+builder-debug.yml
+mac-arm64
+total 646404
+drwxr-xr-x  3 runner runner     12288 Nov  5 09:26 .
+drwxr-xr-x 59 runner runner      4096 Nov  5 09:26 ..
+-rwxr-xr-x  1 runner runner    129648 Nov  5 09:26 CapriEars
+-rw-r--r--  1 runner runner     28504 Nov  5 09:26 CapriEars.deps.json
+-rw-r--r--  1 runner runner     16384 Nov  5 09:26 CapriEars.dll
+-rw-r--r--  1 runner runner       465 Nov  5 09:26 CapriEars.runtimeconfig.json
+-rwxr-xr-x  1 runner runner    892712 Nov  5 09:26 Microsoft.CSharp.dll
+-rw-r--r-- 1 runner runner 706979386 Nov  5 09:26 Capri-Mac-RU.zip
