@@ -15,7 +15,7 @@ export class StyledMenu {
     this.el.querySelector('.cmenu__x').addEventListener('click', () => this.hide());
     this.list.addEventListener('click', (e) => this.clicked(e));
     window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !this.el.hidden) this.hide(); });
-    window.addEventListener('mousedown', (e) => { if (!this.el.hidden && !this.el.contains(e.target)) this.hide(); }, true);
+    window.addEventListener('mousedown', (e) => { if (!this.el.hidden && !this.el.contains(e.target) && !e.target.closest?.('.panel__settings')) this.hide(); }, true);
     host.onMenu?.(({ items, at, refresh }) => this.show(items, refresh ? null : at));
     this.pointer = { x: 0, y: 0 };
     window.addEventListener('mousemove', (e) => { this.pointer = { x: e.clientX, y: e.clientY }; });

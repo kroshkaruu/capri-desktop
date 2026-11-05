@@ -1208,6 +1208,7 @@ export class Capri {
   // Leave in a column of light, reappear somewhere else.
   async teleport(to, opts = {}) {
     if (this.stowed) return; // put away: she stays in her biochip
+    if (this.chatting && !opts.allow) return; // her chat open: she stays where you're talking to her
     if (this.busy || this.dormant) {
       this.pending = { to, opts };
       if (this.dormant) this.rouse(); // asleep, down to her mask: she comes back first, then goes

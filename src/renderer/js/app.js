@@ -220,7 +220,7 @@ async function boot() {
   panel.onChar = (kind) => voice.play('blip', { mood: kind });
   panel.onTalk = (talking) => talking && capri.perform('talk');
   capri.onMenu = () => {}; // a right click on her opens nothing
-  panel.onSettings = () => host.openMenu();
+  panel.onSettings = () => (menu.visible ? menu.hide() : host.openMenu()); // ⚙ again closes it
 
   // Her guide (guide.js): her welcome on first launch, and "How does it work?" in her menu,
   // where she takes you to things and points at them.

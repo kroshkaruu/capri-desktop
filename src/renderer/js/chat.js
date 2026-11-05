@@ -283,6 +283,7 @@ export class Chat {
     }
     this.open = true;
     host.earsWant?.(true); // she listens while her chat is open, and only then
+    capri.chatting = true; // and stays put
     setTimeout(() => this.panel.chatInput.focus(), 150); // once the overlay has the keyboard
     capri.perform('hop');
     capri.nextMove = capri.nextGaze = performance.now() + STAY_MS;
@@ -290,6 +291,7 @@ export class Chat {
 
   close() {
     this.host.earsWant?.(false);
+    this.capri.chatting = false;
     if (!this.open) return;
     this.open = false;
     if (this.turn) this.host.chatStop(this.turn);
@@ -1034,19 +1036,18 @@ export class Chat {
         const ok = what === 'on' ? r.on : !r.on;
         return { line: ok ? `${r.name}: ${what === 'on' ? 'включила' : 'выключила'}.` : `${r.name}: попросила ${what === 'on' ? 'включиться' : 'выключиться'}, сейчас статус «${r.status}».`, face: ok ? 'smug' : 'aside' };
       }
+      case 'youtube': return value ? this.youtube(value) : null; // the video itself, not the search
       case 'images':
-      case 'youtube':
       case 'maps':
       case 'translate': {
         if (!value) return null;
         const q = encodeURIComponent(value);
         const url = {
           images: `https://www.google.com/search?tbm=isch&q=${q}`,
-          youtube: `https://www.youtube.com/results?search_query=${q}`,
           maps: `https://www.google.com/maps/search/${q}`,
           translate: `https://translate.google.com/?sl=auto&tl=ru&text=${q}`,
         }[kind];
-        const said = { images: `Ищу картинки: «${value}».`, youtube: `Ищу на YouTube: «${value}».`, maps: `Открываю на карте: «${value}».`, translate: 'Открываю переводчик.' }[kind];
+        const said = { images: `Ищу картинки: «${value}».`, maps: `Открываю на карте: «${value}».`, translate: 'Открываю переводчик.' }[kind];
         this.zap();
         return (await this.host.openSite(url)) ? { line: said, face: 'smug' } : null;
       }
@@ -1072,7 +1073,7 @@ export class Chat {
       + '[[info: battery]], [[info: disk]], [[info: ram]], [[info: ip]] (the numbers show under your answer: don\'t make them up)\n'
       + '[[vpn: on]], [[vpn: off]], [[vpn: status]] switch their VPN (Red Shield VPN or another set up in the system) on or off, really, like its toggle: "включи впн" = [[vpn: on]]. Never say you can only open the VPN app.\n'
       + '[[power: lock]], [[power: sleep]], [[power: shutdown]], [[power: restart]], [[power: cancel]]\n'
-      + '[[search: QUERY]] search Google in their default browser; [[images: QUERY]] search Google Images; [[youtube: QUERY]] search YouTube; [[maps: PLACE]] Google Maps; [[translate: TEXT]] Google Translate; [[files: WORDS]] find the user\'s files by name (results show under your answer)\n'
+      + '[[search: QUERY]] search Google in their default browser; [[images: QUERY]] search Google Images; [[youtube: WHAT]] play the best YouTube video for it, the video itself ("включи видео про космос", "покажи на ютубе котиков"); [[maps: PLACE]] Google Maps; [[translate: TEXT]] Google Translate; [[files: WORDS]] find the user\'s files by name (results show under your answer)\n'
       + 'Understand what they want done, however they word it, and pick the tags that do it, several if needed. They mean, for example:\n'
       + '"включи музыку" = open Spotify and play: [[media: play]]. "включи что-нибудь весёлое" or "поставь Кино" = [[music: ARTIST - SONG]] you pick (it plays in Spotify). "выключи/останови музыку" = [[media: pause]]. "дальше", "переключи" = [[media: next]]. "сделай потише/погромче" = [[media: voldown]] / [[media: volup]].\n'
       + '"найди в интернете фото зайчика" = [[images: зайчик]]. "найди, как сварить борщ" or "погугли курс доллара" = [[search: ...]]. "покажи на ютубе котиков" or "включи видео про космос" = [[youtube: ...]]. "где ближайшая аптека" or "как доехать до Эрмитажа" = [[maps: ...]]. "переведи hello world" = [[translate: hello world]]. "открой вк / почту / ютуб" = [[site: vk.com]] / [[site: mail.yandex.ru]] / [[site: youtube.com]]. "открой браузер" = [[open: Browser]].\n'
