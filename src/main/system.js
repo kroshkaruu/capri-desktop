@@ -8,7 +8,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const { execFile } = require('node:child_process');
 const { shell } = require('electron');
-const { osa } = require('./mac');
+const { osa, helperJson } = require('./mac');
 
 const SETTINGS = {
   bluetooth: 'com.apple.BluetoothSettings', sound: 'com.apple.Sound-Settings.extension', wifi: 'com.apple.wifi-settings-extension',
@@ -122,61 +122,17 @@ async function vpnApp(what = 'on') {
   if (!name) return null;
   await run('open', ['-a', name]);
   await new Promise((r) => setTimeout(r, 2500));
-  const words = what === 'off'
-    ? ['disconnect', 'отключ', 'stop', 'выключ', 'стоп', 'turn off']
-    : ['connect', 'подключ', 'start', 'включ', 'старт', 'turn on'];
+  const wanted = what === 'off'
+    ? ['disconnect', 'отключ', 'выключ', 'stop', 'стоп', 'turn off']
+    : ['connect', 'подключ', 'включ', 'start', 'старт', 'turn on'];
   const avoid = what === 'off' ? [] : ['disconnect', 'отключ', 'выключ'];
-  const list = (a) => `{${a.map((w) => `"${w}"`).join(', ')}}`;
-  // every button and checkbox in its windows (and its menu-bar window), by name, title or description
-  const script = `
-set wanted to ${list(words)}
-set avoid to ${list(avoid)}
-tell application "System Events"
-  if not (exists process "${name}") then return "noprocess"
-  tell process "${name}"
-    set found to {}
-    repeat with w in windows
-      try
-        set found to found & (every UI element of entire contents of w whose role is "AXButton" or role is "AXCheckBox" or role is "AXSwitch")
-      end try
-    end repeat
-    repeat with b in found
-      set label to ""
-      try
-        set label to label & " " & (name of b as text)
-      end try
-      try
-        set label to label & " " & (title of b as text)
-      end try
-      try
-        set label to label & " " & (description of b as text)
-      end try
-      ignoring case
-        set bad to false
-        repeat with x in avoid
-          if label contains x then set bad to true
-        end repeat
-        if not bad then
-          repeat with x in wanted
-            if label contains x then
-              click b
-              return "pressed:" & label
-            end if
-          end repeat
-        end if
-      end ignoring
-    end repeat
-    if (count of found) is 1 then
-      click item 1 of found
-      return "pressed: переключатель"
-    end if
-    return "nobutton:" & (count of found)
-  end tell
-end tell`;
-  const out = await osa(script, 10000);
-  if (out === null) return { app: name, need: 'accessibility' };
-  if (out.startsWith('pressed:')) return { app: name, pressed: out.slice(8).trim().slice(0, 60) || 'кнопку' };
-  return { app: name, note: out };
+  let res = null;
+  for (let i = 0; i < 3 && !(res?.pressed || res?.need); i++) {
+    res = await helperJson(['press', name, wanted.join('|'), avoid.join('|')], 15000).catch((err) => ({ error: err.message }));
+    if (!res?.pressed && !res?.need) await new Promise((r) => setTimeout(r, 1500)); // its window is still coming up
+  }
+  if (res?.need) helperJson(['ask-accessibility']).catch(() => {}); // macOS shows its own prompt
+  return { app: name, ...res };
 }
 
 function act(req = {}) {

@@ -1024,7 +1024,8 @@ export class Chat {
           const res = await pc({ action: 'vpnApp', what });
           this.host.log?.(`vpnApp ${what}: ${JSON.stringify(res)}`);
           if (res?.pressed) return { line: `${res.app}: нажала «${res.pressed}».`, face: 'smug' };
-          if (res?.app) return { line: `Открыла ${res.app}. Кнопку внутри мне нажать не дали${res.need ? ': разреши Capri в Настройки → Конфиденциальность и безопасность → Универсальный доступ' : ''}, нажми сам.`, face: 'aside' };
+          if (res?.need) return { line: `Открыла ${res.app}, но нажать кнопку macOS мне не даёт: разреши Capri в Системные настройки → Конфиденциальность и безопасность → «Управление устройством и доступ к данным» (удали её там «−» и добавь заново «+»), потом перезапусти меня.`, face: 'aside' };
+          if (res?.app) return { line: `Открыла ${res.app}, но кнопку ${what === 'off' ? 'отключения' : 'подключения'} в нём не нашла — нажми сам.`, face: 'aside' };
           return { line: 'Не нашла VPN-приложение.', face: 'aside' };
         }
         if (what === 'status') return { line: `${r.name}: ${r.on ? 'включён' : 'выключен'}.`, face: 'look' };

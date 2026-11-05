@@ -79,7 +79,6 @@ export class Ears {
 
   async phrase(heard) {
     const text = heard.trim();
-    this.host.log?.(`ears heard: ${JSON.stringify(text)}`);
     if (!text || JUNK.test(text)) return;
     const command = woke(text);
     const now = performance.now();
@@ -101,6 +100,7 @@ export class Ears {
     } else {
       return;
     }
+    this.host.log?.(`ears, said to her: ${JSON.stringify(said)}`); // only what was meant for her, never the room
     // you're typing to her: what she heard isn't for her
     if (this.chat.open && this.panel.chatInput?.value.trim()) return;
     this.wakeUntil = 0;

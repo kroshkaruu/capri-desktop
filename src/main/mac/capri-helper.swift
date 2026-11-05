@@ -549,6 +549,66 @@ final class Devices {
   }
 }
 
+// ---------- press: a button in another app (her VPN's connect button) ----------
+
+func axString(_ el: AXUIElement, _ attr: String) -> String {
+  var value: CFTypeRef?
+  guard AXUIElementCopyAttributeValue(el, attr as CFString, &value) == .success, let v = value else { return "" }
+  if let s = v as? String { return s }
+  if let n = v as? NSNumber { return n.stringValue }
+  return ""
+}
+
+func axChildren(_ el: AXUIElement) -> [AXUIElement] {
+  var out: [AXUIElement] = []
+  for attr in [kAXChildrenAttribute as String, kAXWindowsAttribute as String, "AXExtrasMenuBar"] {
+    var value: CFTypeRef?
+    if AXUIElementCopyAttributeValue(el, attr as CFString, &value) == .success {
+      if let list = value as? [AXUIElement] { out += list }
+      else if let v = value, CFGetTypeID(v) == AXUIElementGetTypeID() { out.append(v as! AXUIElement) }
+    }
+  }
+  return out
+}
+
+// press <app name> <word|word|…> <avoid|avoid|…>: the first button, checkbox or switch whose name, title,
+// description or help has a wanted word and no avoided one, pressed. Lists the ones it saw when none fit.
+func press(_ appName: String, _ wanted: [String], _ avoid: [String]) -> String {
+  guard AXIsProcessTrusted() else { return "{\"need\":\"accessibility\"}" }
+  let target = appName.lowercased()
+  guard let app = NSWorkspace.shared.runningApplications.first(where: {
+    ($0.localizedName ?? "").lowercased() == target || ($0.bundleURL?.deletingPathExtension().lastPathComponent ?? "").lowercased() == target
+  }) else { return "{\"noapp\":true}" }
+  let root = AXUIElementCreateApplication(app.processIdentifier)
+  var queue: [(AXUIElement, Int)] = [(root, 0)]
+  var seen = 0
+  var labels: [String] = []
+  var toggles: [AXUIElement] = []
+  while !queue.isEmpty && seen < 4000 {
+    let (el, depth) = queue.removeFirst()
+    seen += 1
+    let role = axString(el, kAXRoleAttribute as String)
+    if ["AXButton", "AXCheckBox", "AXSwitch", "AXToggle", "AXMenuItem", "AXMenuBarItem"].contains(role) {
+      let label = [kAXTitleAttribute as String, kAXDescriptionAttribute as String, kAXHelpAttribute as String, "AXIdentifier", kAXValueDescriptionAttribute as String]
+        .map { axString(el, $0) }.filter { !$0.isEmpty }.joined(separator: " ")
+      let low = label.lowercased()
+      if !label.isEmpty { labels.append(role + ":" + label) }
+      if role == "AXCheckBox" || role == "AXSwitch" || role == "AXToggle" { toggles.append(el) }
+      if !low.isEmpty && wanted.contains(where: { low.contains($0) }) && !avoid.contains(where: { low.contains($0) }) {
+        let ok = AXUIElementPerformAction(el, kAXPressAction as CFString) == .success
+        return "{\"pressed\":\(json(label)),\"ok\":\(ok)}"
+      }
+    }
+    if depth < 14 { for child in axChildren(el) { queue.append((child, depth + 1)) } }
+  }
+  // one switch and nothing named: that's the switch
+  if toggles.count == 1 {
+    let ok = AXUIElementPerformAction(toggles[0], kAXPressAction as CFString) == .success
+    return "{\"pressed\":\"переключатель\",\"ok\":\(ok)}"
+  }
+  return "{\"none\":true,\"seen\":[\(labels.prefix(40).map { json($0) }.joined(separator: ","))]}"
+}
+
 // ---------- main ----------
 
 let args = Array(CommandLine.arguments.dropFirst())
@@ -571,6 +631,11 @@ case "media":
 case "activate":
   let pid = args.count > 1 ? pid_t(args[1]) ?? 0 : 0
   emit(String(NSRunningApplication(processIdentifier: pid)?.activate(options: []) ?? false))
+case "press":
+  let name = args.count > 1 ? args[1] : ""
+  let wanted = (args.count > 2 ? args[2] : "").lowercased().split(separator: "|").map(String.init)
+  let avoid = (args.count > 3 ? args[3] : "").lowercased().split(separator: "|").map(String.init)
+  emit(press(name, wanted, avoid))
 case "perms":
   emit("{\"screen\":\(CGPreflightScreenCaptureAccess()),\"accessibility\":\(AXIsProcessTrusted())}")
 case "ask-accessibility":
