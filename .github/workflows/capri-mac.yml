@@ -61,6 +61,7 @@ jobs:
           cp prev/Capri.app/Contents/Resources/app.asar.unpacked/src/main/mac/capri-helper src/main/mac/capri-helper
           chmod +x src/main/mac/capri-helper
           ls -la src/main/mac | tee logs/build.log
+          node -e "const f='package.json',p=require('./'+f);delete p.os;require('fs').writeFileSync(f,JSON.stringify(p,null,2))"
           npm ci 2>&1 | tail -3 | tee -a logs/build.log
           npx electron-builder --mac dir --arm64 --publish never 2>&1 | tail -20 | tee -a logs/build.log
           ls dist | tee -a logs/build.log
