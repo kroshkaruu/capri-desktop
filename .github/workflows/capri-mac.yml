@@ -33,9 +33,12 @@ jobs:
           path: ears/out
 
   mac:
+    # GitHub's Mac machines keep timing out in the queue: the app is put together on Linux, with her
+    # Mac helper taken from the last build made on a Mac (it hasn't changed since; the VPN click has a
+    # JavaScript fallback).
     needs: ears
-    runs-on: macos-15
-    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -47,26 +50,30 @@ jobs:
           path: ears/out
       - name: Build
         env:
+          GH_TOKEN: ${{ github.token }}
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: |
           set -o pipefail
-          mkdir -p logs
+          mkdir -p logs prev
           chmod +x ears/out/CapriEars
-          node scripts/build-mac-helper.js 2>&1 | tee logs/build.log
-          ls -la src/main/mac | tee -a logs/build.log
+          gh release download capri-mac-20261105-13 -p Capri-Mac-RU.zip -D prev
+          (cd prev && unzip -q Capri-Mac-RU.zip)
+          cp prev/Capri.app/Contents/Resources/app.asar.unpacked/src/main/mac/capri-helper src/main/mac/capri-helper
+          chmod +x src/main/mac/capri-helper
+          ls -la src/main/mac | tee logs/build.log
           npm ci 2>&1 | tail -3 | tee -a logs/build.log
-          npx electron-builder --mac zip --arm64 --publish never 2>&1 | tail -30 | tee -a logs/build.log
+          npx electron-builder --mac dir --arm64 --publish never 2>&1 | tail -20 | tee -a logs/build.log
           ls dist | tee -a logs/build.log
       - name: Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          zip=$(ls dist/*.zip | head -1)
-          mkdir pack && (cd pack && ditto -x -k "../$zip" .)
-          cp "Как установить.txt" pack/
-          (cd pack && ditto -c -k --keepParent Capri.app ../Capri-Mac-RU.zip && zip -q ../Capri-Mac-RU.zip "Как установить.txt")
+          app=$(find dist -maxdepth 2 -name 'Capri.app' -type d | head -1)
+          mkdir pack && cp -R "$app" pack/Capri.app && cp "Как установить.txt" pack/
+          (cd pack && zip -qry ../Capri-Mac-RU.zip Capri.app "Как установить.txt")
+          ls -la Capri-Mac-RU.zip | tee -a logs/build.log
           tag="capri-mac-$(date +%Y%m%d)-${{ github.run_number }}"
-          gh release create "$tag" Capri-Mac-RU.zip --target capri-mac --latest --title "Капри для Mac (порт CyberMoonie) по-русски — сборка ${{ github.run_number }}" --notes-file "Как установить.txt"
+          gh release create "$tag" Capri-Mac-RU.zip --target capri-mac --latest --title "Капри для Mac по-русски — сборка ${{ github.run_number }}" --notes-file "Как установить.txt"
       - name: Share the logs
         if: always()
         run: |
@@ -77,7 +84,7 @@ jobs:
           cp -R logs /tmp/logs
           git checkout --orphan build-log-mac
           git rm -rfq . >/dev/null
-          rm -rf dist pack ears/out node_modules
+          rm -rf dist pack prev ears/out node_modules
           cp -R /tmp/logs/. .
           git add -A status.txt build.log
           git commit -qm "build ${{ github.run_number }}: ${{ job.status }}"
