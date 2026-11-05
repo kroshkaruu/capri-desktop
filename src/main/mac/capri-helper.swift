@@ -561,7 +561,7 @@ func axString(_ el: AXUIElement, _ attr: String) -> String {
 
 func axChildren(_ el: AXUIElement) -> [AXUIElement] {
   var out: [AXUIElement] = []
-  for attr in [kAXChildrenAttribute as String, kAXWindowsAttribute as String, "AXExtrasMenuBar"] {
+  for attr in [kAXChildrenAttribute as String, kAXWindowsAttribute as String] {
     var value: CFTypeRef?
     if AXUIElementCopyAttributeValue(el, attr as CFString, &value) == .success {
       if let list = value as? [AXUIElement] { out += list }
@@ -588,13 +588,17 @@ func press(_ appName: String, _ wanted: [String], _ avoid: [String]) -> String {
     let (el, depth) = queue.removeFirst()
     seen += 1
     let role = axString(el, kAXRoleAttribute as String)
-    if ["AXButton", "AXCheckBox", "AXSwitch", "AXToggle", "AXMenuItem", "AXMenuBarItem"].contains(role) {
+    // never into a menu: the Apple menu's Restart, Shut Down and Log Out live there
+    if ["AXMenuBar", "AXMenu", "AXMenuItem", "AXMenuBarItem", "AXMenuButton"].contains(role) { continue }
+    if ["AXButton", "AXCheckBox", "AXSwitch", "AXToggle"].contains(role) {
       let label = [kAXTitleAttribute as String, kAXDescriptionAttribute as String, kAXHelpAttribute as String, "AXIdentifier", kAXValueDescriptionAttribute as String]
         .map { axString(el, $0) }.filter { !$0.isEmpty }.joined(separator: " ")
       let low = label.lowercased()
       if !label.isEmpty { labels.append(role + ":" + label) }
       if role == "AXCheckBox" || role == "AXSwitch" || role == "AXToggle" { toggles.append(el) }
-      if !low.isEmpty && wanted.contains(where: { low.contains($0) }) && !avoid.contains(where: { low.contains($0) }) {
+      let never = ["restart", "shut down", "shutdown", "log out", "logout", "sleep", "quit", "перезагруз", "выключить…", "выключить...", "завершить", "выйти", "сон", "режим сна", "удалить", "delete", "uninstall"]
+      if !low.isEmpty && wanted.contains(where: { low.contains($0) }) && !avoid.contains(where: { low.contains($0) })
+        && !never.contains(where: { low.contains($0) }) {
         let ok = AXUIElementPerformAction(el, kAXPressAction as CFString) == .success
         return "{\"pressed\":\(json(label)),\"ok\":\(ok)}"
       }
