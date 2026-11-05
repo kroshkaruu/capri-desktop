@@ -282,12 +282,14 @@ export class Chat {
       return;
     }
     this.open = true;
+    host.earsWant?.(true); // she listens while her chat is open, and only then
     setTimeout(() => this.panel.chatInput.focus(), 150); // once the overlay has the keyboard
     capri.perform('hop');
     capri.nextMove = capri.nextGaze = performance.now() + STAY_MS;
   }
 
   close() {
+    this.host.earsWant?.(false);
     if (!this.open) return;
     this.open = false;
     if (this.turn) this.host.chatStop(this.turn);

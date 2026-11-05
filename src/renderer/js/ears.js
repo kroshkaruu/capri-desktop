@@ -39,12 +39,13 @@ export class Ears {
 
   on(event = {}) {
     if (event.type === 'ready') {
-      if (this.told) return;
-      this.told = true;
-      if (!this.chat.open) this.panel.say({ kind: 'info', face: 'look', line: 'Слышу тебя. Скажи «Капри» — и что сделать или о чём спросить.', hold: 6000 });
+      // her chat just opened: say it, no name needed
+      this.followUntil = performance.now() + 15000;
+      this.hint('🎙 Слушаю — говори', 15000);
       return;
     }
     if (event.type === 'status' || event.type === 'error') {
+      if (this.chat.open) return this.hint(`🎙 ${event.text || 'С микрофоном что-то не так.'}`, 12000);
       this.panel.say({ kind: 'info', face: event.type === 'error' ? 'wide' : 'aside', line: event.text || 'С микрофоном что-то не так.', hold: event.type === 'error' ? 12000 : 8000 });
       return;
     }
@@ -55,9 +56,10 @@ export class Ears {
     if (event.type === 'phrase') this.phrase(String(event.text || '')).catch((err) => console.warn('[capri] ears', err));
   }
 
+  // her chat open: what you say right away, or after her answer, needs no name
   listening() {
     const now = performance.now();
-    return now < this.wakeUntil || (this.chat.open && now < this.followUntil);
+    return this.chat.open && (now < this.wakeUntil || now < this.followUntil);
   }
 
   // the chat box says she's listening, and goes back to what it said after a while
@@ -79,7 +81,7 @@ export class Ears {
 
   async phrase(heard) {
     const text = heard.trim();
-    if (!text || JUNK.test(text)) return;
+    if (!this.chat.open || !text || JUNK.test(text)) return; // her chat closed: she isn't listening at all
     const command = woke(text);
     const now = performance.now();
     let said = null;

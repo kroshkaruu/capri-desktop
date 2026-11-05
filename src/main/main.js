@@ -382,8 +382,10 @@ function rendererConfig() {
   return { ...cfg, keys: Object.keys(apiKeys || {}), assistant: activeAssistant().id, lang: resolveLang(cfg.lang), langSetting: cfg.lang };
 }
 
+// she listens only while her chat is open (and voice is on in her menu): never the room otherwise
+let chatOpen = false;
 function syncEars() {
-  if (config.load().ears !== false) ears.start((evt) => overlay?.webContents.send('ears:event', evt));
+  if (config.load().ears !== false && chatOpen) ears.start((evt) => overlay?.webContents.send('ears:event', evt));
   else ears.stop();
 }
 
@@ -1027,6 +1029,7 @@ function registerIpc() {
   ipcMain.handle('apps:music', (_e, query) => launch.music(query).catch(() => false));
   ipcMain.handle('apps:site', (_e, address) => launch.site(address).catch(() => false));
   // the Mac itself, from her chat: settings, battery, volume, snip, windows, theme, power (system.js)
+  ipcMain.on('ears:want', (_e, on) => { chatOpen = Boolean(on); syncEars(); });
   ipcMain.handle('pc:do', (_e, req) => Promise.resolve(system.act(req || {})).catch(() => null));
   // what she heard and did, to work out what went wrong (~/Library/Application Support/Capri/capri-debug.log)
   ipcMain.on('debug:log', (_e, line) => {
@@ -1247,7 +1250,6 @@ function main() {
     registerIpc();
     createOverlay();
     createTray();
-    overlay?.webContents.once('did-finish-load', () => setTimeout(syncEars, 2500));
     windowWatch = startWindowWatch({
       overlay,
       onUpdate: (data) => {
@@ -1269,6 +1271,7 @@ function main() {
       onDebug: DEV ? debugHandler : null,
     });
     globalShortcut.register('Control+Alt+C', () => toggleVisible());
+    globalShortcut.register('Control+Alt+V', () => sendCommand('chat')); // her chat, and her ears with it
     llm.restoreClaude(readMemory().claude);
     refreshModels(); // for her menu's model list
     setTimeout(() => launch.launchables().catch(() => {}), 20000); // what she can open, before you ask
