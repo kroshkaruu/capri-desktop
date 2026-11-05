@@ -159,6 +159,31 @@ async function vpnApp(what = 'on') {
   return { app: name, ...res };
 }
 
+// A note in Notes (in the default account's Notes folder): a new one, or text added to the end of one
+// found by its title. Notes asks once whether Capri may control it.
+const html = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+const quoted = (t) => `"${String(t).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+
+async function note(title, text, append = false) {
+  const name = String(title || '').trim().slice(0, 120) || 'Заметка от Капри';
+  const body = String(text || '').trim().slice(0, 8000);
+  if (append) {
+    const out = await osa(`tell application "Notes"
+  set found to (every note whose name contains ${quoted(name)})
+  if (count of found) is 0 then return "none"
+  set n to item 1 of found
+  set body of n to (body of n) & ${quoted(`<div>${html(body)}</div>`)}
+  return name of n
+end tell`, 15000);
+    if (out === null) return { need: 'automation' };
+    if (out === 'none') return { none: true, title: name };
+    return { added: true, title: out };
+  }
+  const out = await osa(`tell application "Notes" to make new note with properties {body:${quoted(`<h1>${html(name)}</h1><div>${html(body)}</div>`)}}
+return "ok"`, 15000);
+  return out === null ? { need: 'automation' } : { made: true, title: name };
+}
+
 function act(req = {}) {
   switch (req.action) {
     case 'settings': return settings(String(req.page));
@@ -170,6 +195,7 @@ function act(req = {}) {
     case 'power': return power(String(req.what), Number(req.seconds) || 0);
     case 'vpn': return vpn(String(req.what || 'status'), String(req.name || ''));
     case 'vpnApp': return vpnApp(String(req.what || 'on'));
+    case 'note': return note(req.title, req.text, Boolean(req.append));
     default: return null;
   }
 }

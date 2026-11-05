@@ -936,6 +936,17 @@ export class Chat {
         if (res?.error) return { line: `${t.failed} ${res.error}`, face: 'aside' };
         return { line: fmt(res?.running ? t.stillOpen : t.closed, { app: app.name }), face: res?.running ? 'aside' : 'laugh' };
       }
+      case 'note':
+      case 'note_add': {
+        // [[note: TITLE | TEXT]] a new note; [[note_add: TITLE | TEXT]] added to the end of a note found by its title
+        const [title, ...rest] = value.split('|');
+        const text = rest.join('|').replace(/\\n/g, '\n').trim();
+        if (!title?.trim() && !text) return null;
+        const r = await pc({ action: 'note', title: title.trim(), text: text || '', append: kind === 'note_add' });
+        if (!r || r.need) return { line: 'Заметки не пустили меня: разреши Capri управлять «Заметками» (Системные настройки → Конфиденциальность и безопасность → Автоматизация).', face: 'aside' };
+        if (r.none) return { line: `Не нашла заметку «${r.title}».`, face: 'aside' };
+        return { line: r.added ? `Дописала в заметку «${r.title}».` : `Записала в «Заметки»: «${r.title}».`, face: 'smug' };
+      }
       case 'hide': {
         if (!value) return null;
         const app = await this.host.findApp(value);
@@ -1073,6 +1084,7 @@ export class Chat {
       'You control the user\'s Mac with tags written at the very end of your answer. One tag per action; several actions in one message mean several tags, in the order asked. The tags:\n'
       + '[[open: NAME]] open an app or a game by its real macOS name in English (Заметки = Notes, Часы = Clock, Календарь = Calendar, Настройки = System Settings, Музыка = Music, Фото = Photos, Сообщения = Messages, Карты = Maps, Калькулятор = Calculator, Почта = Mail, Напоминания = Reminders, Телеграм = Telegram, Хром = Google Chrome, Клод = Claude, the Claude desktop app, ЧатГПТ = ChatGPT, Браузер = Browser, their default browser), or a folder: Downloads, Documents, Desktop, Pictures, Finder, Trash\n'
       + '[[close: NAME]] quit an app (same names): only for "закрой", "выключи", "выйди из"\n'
+      + '[[note: TITLE | TEXT]] write a new note in Notes ("запиши в заметки…", "сделай заметку…", "запиши список покупок"); [[note_add: TITLE | TEXT]] add text to the end of an existing note found by its title ("допиши в заметку про покупки молоко"). Write the note\'s text yourself in full, neatly, with line breaks as \\n if needed.\n'
       + '[[hide: NAME]] hide an app, it keeps running ("скрой", "спрячь", "убери с экрана", "сверни"): never close for those\n'
       + '[[site: ADDRESS]] open a website, like youtube.com\n'
       + '[[music: ARTIST - SONG]] play a song (if they didn\'t say which, pick one that fits); [[spotify: WHAT]] search Spotify for it\n'
