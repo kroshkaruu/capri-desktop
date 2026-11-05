@@ -25,7 +25,6 @@ jobs:
       - run: |
           dotnet publish ears/CapriEars.csproj -c Release -r osx-arm64 --self-contained -o ears/out -p:DebugType=none -clp:ErrorsOnly
           find ears/out/runtimes -mindepth 1 -maxdepth 1 -type d ! -name macos-arm64 -exec rm -rf {} + || true
-          curl -sSL --retry 3 -o ears/out/ggml-large-v3-turbo-q5_0.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin
           ls -la ears/out | head -5
       - uses: actions/upload-artifact@v4
         with:
