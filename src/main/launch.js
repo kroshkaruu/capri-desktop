@@ -48,7 +48,7 @@ async function launchables() {
 // Russian names of apps -> the words in their real names, so "открой телеграм" finds Telegram.
 const RU_APPS = [
   [/телеграм|телеграмм|телега|тг\b/i, 'telegram'], [/хром|гугл хром/i, 'chrome'], [/сафари/i, 'safari'], [/спотифа?й|спотик/i, 'spotify'],
-  [/дискорд/i, 'discord'], [/заметк/i, 'notes'], [/напоминани/i, 'reminders'], [/календар/i, 'calendar'], [/почт/i, 'mail'],
+  [/дискорд/i, 'discord'], [/клод|клауд|клоуд/i, 'claude'], [/чатгпт|чат гпт|chatgpt/i, 'chatgpt'], [/телемост/i, 'telemost'], [/обс\b/i, 'obs'], [/фл студи/i, 'fl studio'], [/аблетон|эйблтон/i, 'ableton'], [/миро\b/i, 'miro'], [/влс|vlc/i, 'vlc'], [/капкат/i, 'capcut'], [/заметк/i, 'notes'], [/напоминани/i, 'reminders'], [/календар/i, 'calendar'], [/почт/i, 'mail'],
   [/калькулятор/i, 'calculator'], [/терминал/i, 'terminal'], [/финдер|файндер|файлы/i, 'finder'], [/настройки|системные настройки/i, 'system settings'],
   [/фото(?:графии)?$|фотки/i, 'photos'], [/музык/i, 'music'], [/сообщени|месседж/i, 'messages'], [/фейстайм/i, 'facetime'],
   [/карт[ыу]/i, 'maps'], [/зум\b/i, 'zoom'], [/ватсап|вотсап|whatsapp/i, 'whatsapp'], [/вк\b|вконтакте/i, 'vk'], [/яндекс браузер/i, 'yandex'],
@@ -168,7 +168,8 @@ const risky = (item) => item?.kind === 'file' && RUNS.test(item.id);
 
 // Folders asked for by what they are ("ouvre mes téléchargements", "open finder").
 const FOLDERS = [
-  ['finder', /\bfinder\b|explorateur|file explorer|explorador|проводник/i],
+  ['finder', /\bfinder\b|explorateur|file explorer|explorador|проводник|финдер/i],
+  ['browser', /браузер|\bbrowser\b/i],
   ['trash', /corbeille|recycle bin|\btrash\b|papelera|lixeira|lixo|корзин/i],
   ['downloads', /t[ée]l[ée]chargements?|downloads?|descargas|transfer[êe]ncias|загрузк/i],
   ['desktop', /\bbureau\b|\bdesktop\b|escritorio|[áa]rea de trabalho|рабоч\S* стол/i],
@@ -186,6 +187,7 @@ function knownFolder(text) {
 // A Finder window on your home folder, the Trash, or the folder itself.
 function openKnown(id) {
   if (id === 'finder') return shell.openPath(app.getPath('home'));
+  if (id === 'browser') return shell.openExternal('https://www.google.com'); // whichever browser is the Mac's default
   if (id === 'trash') return shell.openPath(path.join(app.getPath('home'), '.Trash'));
   return shell.openPath(app.getPath(id));
 }

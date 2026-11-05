@@ -26,6 +26,7 @@ const DEFAULTS = {
   persona: '',       // how you want her, in your words (her chat)
   myLines: [],       // lines of yours she says now and then, with hers
   memories: [],      // things you asked her to remember (her chat)
+  protocols: {},     // «протокол 1» = what to do, in your words (her chat)
   claudeMode: 'default', // Claude Code's permission mode in her chat: 'default' only reads, 'acceptEdits' edits without asking
   claude: false,     // she watches Claude Code (off: she just keeps you company, no word of it)
   rest: 'corner',    // where she rests when nothing's going on: 'corner', or 'dock' (standing on the Dock while it shows)

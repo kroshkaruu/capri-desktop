@@ -161,6 +161,13 @@ const TINY = /[:-](0\.5b|1b|1\.5b|135m|270m|360m)\b/i;
 // her face when she greets you in a mood (bond.js)
 const MOOD_FACE = { angry: 'many', sulk: 'aside', dizzy: 'wide', thrown: 'wide', jealous: 'look', fun: 'laugh', happy: 'laugh', forgiven: 'smug' };
 
+// Протоколы: «запомни протокол 1: открой браузер, телеграм и клод», потом просто «протокол 1».
+const PROTOCOL_SAVE = /^(?:капри,?\s+)?(?:запомни|сохрани|создай|запиши|сделай|добавь)\s+протокол\s+([\p{L}\d-]+)\s*[:,—–-]?\s*(.{3,400})$/iu;
+const PROTOCOL_DROP = /^(?:капри,?\s+)?(?:удали|забудь|сотри)\s+протокол\s+([\p{L}\d-]+)[.!]*$/iu;
+const PROTOCOL_RUN = /^(?:капри,?\s+)?(?:(?:запусти|выполни|включи|активируй|давай)\s+)?протокол\s+([\p{L}\d-]+)[.!]*$/iu;
+const NUMBER_WORDS = { один: '1', одна: '1', первый: '1', два: '2', второй: '2', три: '3', третий: '3', четыре: '4', четвёртый: '4', четвертый: '4', пять: '5', пятый: '5', шесть: '6', семь: '7', восемь: '8', девять: '9', десять: '10' };
+const protocolName = (word) => { const w = String(word).toLowerCase().replace(/[.,!?]+$/, ''); return NUMBER_WORDS[w] || w; };
+
 // 1 ч 30 мин, 10 мин, 45 с
 function span(ms) {
   const sec = Math.round(ms / 1000);
@@ -199,6 +206,7 @@ export class Chat {
 
   async start() {
     const { capri, host, t } = this;
+    host.getConfig().then((c) => { this.protocols = c?.protocols || {}; }).catch(() => {});
     if (this.open) {
       this.panel.chatInput.focus();
       return;
@@ -302,11 +310,14 @@ export class Chat {
     this.onMessage?.();
     // what you asked for plainly happens right away (the music, the volume, an app you named): her
     // line about it comes under her answer (Claude Code, answering her chat, does things its own way)
+    const said = text;
+    text = this.expand(text);
+    if (text !== said) this.history[this.history.length - 1] = { role: 'user', content: `${said} (это сохранённый протокол, сделай всё: ${text})` };
     let asked = this.agent ? null : this.asked(text);
     if (asked?.kind === 'look') return this.sendLook(text, id);
     // her tags do it (several actions in one message too): what was read off your message only if she writes none
     this.fallback = null;
-    if (asked && !['remind', 'name', 'memo'].includes(asked.kind)) {
+    if (asked && !['remind', 'name', 'memo', 'protocol'].includes(asked.kind)) {
       this.fallback = asked;
       asked = null;
     }
@@ -444,6 +455,10 @@ export class Chat {
     }
     const name = NAME_ASK.exec(text)?.[1];
     if (name) return { kind: 'name', name };
+    const saved = PROTOCOL_SAVE.exec(text.trim());
+    if (saved) return { kind: 'protocol', name: protocolName(saved[1]), steps: saved[2].trim().replace(/[.!]+$/, '') };
+    const dropped = PROTOCOL_DROP.exec(text.trim());
+    if (dropped) return { kind: 'protocol', name: protocolName(dropped[1]), steps: null };
     const memo = MEMO_ASK.exec(text)?.[1]?.trim();
     if (memo) return { kind: 'memo', text: memo };
     if (this.look && LOOK_ASK.test(text)) return { kind: 'look' };
@@ -510,6 +525,15 @@ export class Chat {
       custom.userName = asked.name; // her answer, being written now, already knows it
       this.host.setConfig({ userName: asked.name });
       return { line: fmt(this.brain.t.custom.named, { name: asked.name }), face: 'laugh' };
+    }
+    if (asked.kind === 'protocol') {
+      const all = { ...(this.protocols || {}) };
+      if (asked.steps) all[asked.name] = asked.steps;
+      else if (all[asked.name]) delete all[asked.name];
+      else return { line: `Протокола «${asked.name}» и не было.`, face: 'aside' };
+      this.protocols = all;
+      this.host.setConfig({ protocols: all });
+      return { line: asked.steps ? `Протокол «${asked.name}» сохранён: ${asked.steps}. Скажи «протокол ${asked.name}» — и я всё сделаю.` : `Протокол «${asked.name}» удалён.`, face: 'smug' };
     }
     if (asked.kind === 'memo') {
       custom.memories = [...(custom.memories || []).filter((m) => m !== asked.text), asked.text].slice(-MEMORIES_MAX);
@@ -821,6 +845,13 @@ export class Chat {
   }
 
   // What she can do on the Mac when you ask, and nothing else.
+  // «протокол 1» (or «запусти протокол один»): what it was saved as; anything else as it is
+  expand(text) {
+    const m = PROTOCOL_RUN.exec(String(text).trim());
+    const steps = m && this.protocols?.[protocolName(m[1])];
+    return steps || text;
+  }
+
   // Every tag in her answer, in order ("закрой заметки открой часы" is two), done right away.
   async afterTags(raw, answer, early, text) {
     const t = this.t;
@@ -985,7 +1016,7 @@ export class Chat {
   powersMac() {
     const lines = [
       'You control the user\'s Mac with tags written at the very end of your answer. One tag per action; several actions in one message mean several tags, in the order asked. The tags:\n'
-      + '[[open: NAME]] open an app or a game by its real macOS name in English (Заметки = Notes, Часы = Clock, Календарь = Calendar, Настройки = System Settings, Музыка = Music, Фото = Photos, Сообщения = Messages, Карты = Maps, Калькулятор = Calculator, Почта = Mail, Напоминания = Reminders, Телеграм = Telegram, Хром = Google Chrome), or a folder: Downloads, Documents, Desktop, Pictures, Finder, Trash\n'
+      + '[[open: NAME]] open an app or a game by its real macOS name in English (Заметки = Notes, Часы = Clock, Календарь = Calendar, Настройки = System Settings, Музыка = Music, Фото = Photos, Сообщения = Messages, Карты = Maps, Калькулятор = Calculator, Почта = Mail, Напоминания = Reminders, Телеграм = Telegram, Хром = Google Chrome, Клод = Claude, the Claude desktop app, ЧатГПТ = ChatGPT, Браузер = Browser, their default browser), or a folder: Downloads, Documents, Desktop, Pictures, Finder, Trash\n'
       + '[[close: NAME]] quit an app (same names)\n'
       + '[[site: ADDRESS]] open a website, like youtube.com\n'
       + '[[music: ARTIST - SONG]] play a song (if they didn\'t say which, pick one that fits); [[spotify: WHAT]] search Spotify for it\n'
@@ -1000,6 +1031,8 @@ export class Chat {
       + 'Example. User: "закрой заметки открой часы". You: "Заметки — прочь, часы — на экран. [[close: Notes]] [[open: Clock]]"\n'
       + 'The tags act right away: never mention buttons and never ask them to click or confirm (only the power tags show a button by themselves). Say in a few words what you\'re doing, as if it\'s happening. Write tags only when they ask you to do something; a plain question or chat gets no tag.',
     ];
+    const protocols = Object.entries(this.protocols || {});
+    if (protocols.length) lines.push(`The user's saved protocols (when they say "протокол NAME", do every step of it, with all the tags): ${protocols.map(([n, steps]) => `протокол ${n} = ${steps}`).join('; ')}. They save one by saying "запомни протокол NAME: steps" and delete it with "удали протокол NAME": your system does both, just confirm.`);
     if (this.apps.length) lines.push(`Apps open on their Mac right now: ${this.apps.map(({ name }) => name).join(', ')}.`);
     if (this.reminders) {
       lines.push('Reminders ("напомни мне в 18:00 позвонить маме") are set by your system from their message: just confirm in a few words, and if they didn\'t say when, ask when. Timers use [[timer: SECONDS]].');
