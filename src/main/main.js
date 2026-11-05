@@ -22,6 +22,7 @@ const apps = require('./apps');
 const launch = require('./launch');
 const files = require('./files');
 const ears = require('./ears');
+const hands = require('./hands');
 const system = require('./system');
 const { ASSISTANTS, assistant } = require('./assistants');
 const activeAssistant = () => assistant(config.load().assistant); // Claude Code or Codex
@@ -1067,6 +1068,38 @@ function registerIpc() {
   ipcMain.handle('apps:music', (_e, query) => launch.music(query).catch(() => false));
   ipcMain.handle('apps:site', (_e, address) => launch.site(address).catch(() => false));
   // the Mac itself, from her chat: settings, battery, volume, snip, windows, theme, power (system.js)
+  // her hands in your apps (hands.js): a job done step by step, each step said as it goes
+  let agentAbort = null;
+  ipcMain.handle('agent:run', async (_e, task) => {
+    agentAbort?.abort();
+    const abort = new AbortController();
+    agentAbort = abort;
+    const nameOfPid = (pid) => mac.osa(`tell application "System Events" to get name of first application process whose unix id is ${Number(pid)}`);
+    try {
+      return await hands.run(String(task || '').slice(0, 500), {
+        signal: abort.signal,
+        chat: (messages, signal) => chatWithFallback(config.load(), messages, () => {}, signal || abort.signal, () => false),
+        frontApp: async () => {
+          const front = await mac.osa('tell application "System Events" to get name of first application process whose frontmost is true');
+          if (front && !/^(capri|electron)$/i.test(front)) return front;
+          return otherApp ? nameOfPid(otherApp) : null;
+        },
+        findApp: async (name) => (await apps.find(name).catch(() => null))?.process || null,
+        openApp: async (name) => {
+          const item = await launch.find(name).catch(() => null);
+          if (!item) return null;
+          await launch.launch(item).catch(() => {});
+          return item.name;
+        },
+        onStep: (line) => overlay?.webContents.send('agent:step', line),
+      });
+    } catch (err) {
+      return { said: `Сбилась: ${err.message}` };
+    } finally {
+      if (agentAbort === abort) agentAbort = null;
+    }
+  });
+  ipcMain.on('agent:stop', () => agentAbort?.abort());
   ipcMain.on('ears:want', (_e, on) => { chatOpen = Boolean(on); syncEars(); });
   ipcMain.handle('pc:do', (_e, req) => Promise.resolve(system.act(req || {})).catch(() => null));
   // what she heard and did, to work out what went wrong (~/Library/Application Support/Capri/capri-debug.log)

@@ -882,6 +882,7 @@ export class Chat {
   // Every tag in her answer, in order ("закрой заметки открой часы" is two), done right away.
   async afterTags(raw, answer, early, text) {
     const t = this.t;
+    this.lastAnswer = answer;
     const lines = [];
     let face = null;
     let after = null; // what needs a button after it: the power, files found, a permission
@@ -965,6 +966,20 @@ export class Chat {
         if (!r || r.need) return { line: 'Заметки не пустили меня: разреши Capri управлять «Заметками» (Системные настройки → Конфиденциальность и безопасность → Автоматизация).', face: 'aside' };
         if (r.none) return { line: `Не нашла заметку «${r.title}».`, face: 'aside' };
         return { line: r.added ? `Дописала в заметку «${r.title}».` : `Записала в «Заметки»: «${r.title}».`, face: 'smug' };
+      }
+      case 'do': {
+        // [[do: JOB]]: her hands in the app, step by step (hands.js), each step shown as it goes
+        if (!value) return null;
+        const shown = [];
+        const off = this.host.onAgentStep?.((step) => {
+          shown.push(`⟶ ${step}`);
+          if (this.open && !this.turn) this.panel.stream(`${this.lastAnswer}\n${shown.slice(-4).join('\n')}`, { done: true });
+        });
+        this.capri.perform?.('hop');
+        const r = await this.host.agentRun(value).catch((err) => ({ said: String(err?.message || err) }));
+        off?.();
+        this.remember({ role: 'assistant', content: r?.said || '' });
+        return { line: r?.said || 'Готово.', face: r?.done ? 'laugh' : 'aside' };
       }
       case 'chat': {
         // [[chat: close]]: her chat goes once this answer has been read
@@ -1141,6 +1156,7 @@ export class Chat {
       + '[[app_volume: Spotify | 30]] sets the volume inside Spotify (or Music) itself to 30, [[app_volume: Spotify | -50]] lowers it by 50, [[app_volume: Spotify | +20]] raises it by 20, [[app_volume: Spotify | half]] halves it, down / up by 10: never the Mac\'s volume for these ("сделай спотифай потише", "убавь громкость в спотифае на 50%"). You CAN do this: never say you can only change the Mac\'s volume\n'
       + '[[keys: APP | COMBO]] press a shortcut inside an app (it comes to the front first): COMBO like cmd+t, cmd+shift+n, ctrl+tab, space, return, left, cmd+f. Use the shortcuts you know for that app, e.g. [[keys: Telegram | cmd+k]] to search chats, [[keys: Spotify | space]] to play or pause, [[keys: Spotify | cmd+right]] for the next song\n'
       + '[[menu: APP | Menu > Item]] click a menu item of an app by its titles, in the language its menus are in (the Mac is in Russian: "Файл > Новое окно")\n'
+      + '[[do: JOB]] for anything that needs clicking or typing INSIDE an app, step by step, the way a person would: you see what is on screen and press buttons, links and fields yourself. Write the whole job in plain words in the user\'s language: [[do: в YouTube включи третье видео из результатов]], [[do: в Заметках создай новую заметку и напиши: молоко, хлеб, яйца]], [[do: в Телеграме открой чат с Мамой и напиши «буду в 8»]] (only when they said what to send), [[do: нажми «Подписаться» на этой странице]], [[do: в Spotify открой мой плейлист Chill]]. Use it whenever a quicker tag above can\'t do the whole thing; it can follow an [[open: …]] or [[youtube: …]] tag in the same answer. Never say you can only open an app: with [[do: …]] you can do things inside it\n'
       + '[[chat: close]] close your chat window ("закрой чат", "пока")\n'
       + '[[hide: NAME]] hide an app, it keeps running ("скрой", "спрячь", "убери с экрана", "сверни"): never close for those\n'
       + '[[site: ADDRESS]] open a website, like youtube.com\n'
