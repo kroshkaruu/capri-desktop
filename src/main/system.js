@@ -118,6 +118,29 @@ const VPN_APPS = ['Red Shield VPN', 'Outline', 'Hiddify', 'AmneziaVPN', 'Amnezia
 // press those, so it's a real click there. Red Shield VPN: the big switch in the middle.
 const VPN_SWITCH = { 'Red Shield VPN': [0.503, 0.514] };
 
+// The same real click without her helper: JavaScript for Automation, which reaches CoreGraphics.
+function clickJxa(name, fx, fy) {
+  const script = `
+ObjC.import('CoreGraphics');
+ObjC.import('AppKit');
+const se = Application('System Events');
+const proc = se.processes.byName(${JSON.stringify(name)});
+proc.frontmost = true;
+delay(0.5);
+const w = proc.windows[0];
+const p = w.position(), z = w.size();
+const pt = $.CGPointMake(p[0] + z[0] * ${Number(fx)}, p[1] + z[1] * ${Number(fy)});
+const back = $.CGEventGetLocation($.CGEventCreate(null));
+[$.kCGEventMouseMoved, $.kCGEventLeftMouseDown, $.kCGEventLeftMouseUp].forEach((t) => {
+  $.CGEventPost($.kCGHIDEventTap, $.CGEventCreateMouseEvent(null, t, pt, $.kCGMouseButtonLeft));
+  delay(0.06);
+});
+$.CGEventPost($.kCGHIDEventTap, $.CGEventCreateMouseEvent(null, $.kCGEventMouseMoved, back, $.kCGMouseButtonLeft));
+'ok';`;
+  return new Promise((resolve) => execFile('osascript', ['-l', 'JavaScript', '-e', script], { timeout: 15000 },
+    (err, out) => resolve(err ? { need: /not allowed|assistive|1743|1728/i.test(String(err.message)) ? 'accessibility' : undefined, error: String(err.message).slice(0, 200) } : { clicked: String(out).trim() === 'ok' })));
+}
+
 // A VPN up: a tunnel interface (utun, ipsec, ppp, tun) with an IPv4 address.
 function tunnelUp() {
   return Object.entries(os.networkInterfaces()).some(([name, list]) => /^(utun|ipsec|ppp|tun|wg)/.test(name)
@@ -136,7 +159,9 @@ async function vpnApp(what = 'on') {
     await run('open', ['-a', name]);
     await new Promise((r) => setTimeout(r, 1500));
     const [fx, fy] = VPN_SWITCH[name];
-    const res = await helperJson(['clickwin', name, String(fx), String(fy)], 15000).catch((err) => ({ error: err.message }));
+    // her helper's click, else the same through JavaScript for Automation (a helper built before it had one)
+    let res = await helperJson(['clickwin', name, String(fx), String(fy)], 15000).catch((err) => ({ error: err.message }));
+    if (!res?.clicked && !res?.need) res = await clickJxa(name, fx, fy);
     if (res?.need) { helperJson(['ask-accessibility']).catch(() => {}); return { app: name, ...res }; }
     let now = before;
     for (let i = 0; i < 20 && now === before; i++) { await new Promise((r) => setTimeout(r, 500)); now = tunnelUp(); }
