@@ -938,7 +938,7 @@ export class Chat {
         return value && (await this.host.music(value)) ? { line: fmt(t.music, { song: value }), face: 'laugh' } : null;
       }
       case 'media': {
-        if (!MEDIA_ACTIONS.has(v)) return null;
+        if (!MEDIA_ACTIONS.has(v) && !['volup', 'voldown', 'mute'].includes(v)) return null;
         this.capri.pulse();
         const res = await this.host.media(v);
         if (res?.need) return this.needs(res.need);
@@ -1006,6 +1006,22 @@ export class Chat {
         this.zap();
         return value && (await this.host.webSearch(value)) ? { line: fmt(t.web, { query: value }), face: 'smug' } : null;
       }
+      case 'images':
+      case 'youtube':
+      case 'maps':
+      case 'translate': {
+        if (!value) return null;
+        const q = encodeURIComponent(value);
+        const url = {
+          images: `https://www.google.com/search?tbm=isch&q=${q}`,
+          youtube: `https://www.youtube.com/results?search_query=${q}`,
+          maps: `https://www.google.com/maps/search/${q}`,
+          translate: `https://translate.google.com/?sl=auto&tl=ru&text=${q}`,
+        }[kind];
+        const said = { images: `Ищу картинки: «${value}».`, youtube: `Ищу на YouTube: «${value}».`, maps: `Открываю на карте: «${value}».`, translate: 'Открываю переводчик.' }[kind];
+        this.zap();
+        return (await this.host.openSite(url)) ? { line: said, face: 'smug' } : null;
+      }
       case 'files': return value ? this.doNow({ kind: 'files', query: value, exts: [], then: null }) : null;
       case 'screenshot': return this.doNow({ kind: 'shot' });
       default: return null;
@@ -1027,7 +1043,10 @@ export class Chat {
       + '[[theme: dark]] or [[theme: light]]; [[snip]] a screenshot of an area; [[screenshot]] of the whole screen; [[tidy]] hide all windows, [[untidy]] bring them back\n'
       + '[[info: battery]], [[info: disk]], [[info: ram]], [[info: ip]] (the numbers show under your answer: don\'t make them up)\n'
       + '[[power: lock]], [[power: sleep]], [[power: shutdown]], [[power: restart]], [[power: cancel]]\n'
-      + '[[search: QUERY]] search Google; [[files: WORDS]] find the user\'s files by name (results show under your answer)\n'
+      + '[[search: QUERY]] search Google in their default browser; [[images: QUERY]] search Google Images; [[youtube: QUERY]] search YouTube; [[maps: PLACE]] Google Maps; [[translate: TEXT]] Google Translate; [[files: WORDS]] find the user\'s files by name (results show under your answer)\n'
+      + 'Understand what they want done, however they word it, and pick the tags that do it, several if needed. They mean, for example:\n'
+      + '"включи музыку" = open Spotify and play: [[media: play]]. "включи что-нибудь весёлое" or "поставь Кино" = [[music: ARTIST - SONG]] you pick (it plays in Spotify). "выключи/останови музыку" = [[media: pause]]. "дальше", "переключи" = [[media: next]]. "сделай потише/погромче" = [[media: voldown]] / [[media: volup]].\n'
+      + '"найди в интернете фото зайчика" = [[images: зайчик]]. "найди, как сварить борщ" or "погугли курс доллара" = [[search: ...]]. "покажи на ютубе котиков" or "включи видео про космос" = [[youtube: ...]]. "где ближайшая аптека" or "как доехать до Эрмитажа" = [[maps: ...]]. "переведи hello world" = [[translate: hello world]]. "открой вк / почту / ютуб" = [[site: vk.com]] / [[site: mail.yandex.ru]] / [[site: youtube.com]]. "открой браузер" = [[open: Browser]].\n'
       + 'Example. User: "закрой заметки открой часы". You: "Заметки — прочь, часы — на экран. [[close: Notes]] [[open: Clock]]"\n'
       + 'The tags act right away: never mention buttons and never ask them to click or confirm (only the power tags show a button by themselves). Say in a few words what you\'re doing, as if it\'s happening. Write tags only when they ask you to do something; a plain question or chat gets no tag.',
     ];
