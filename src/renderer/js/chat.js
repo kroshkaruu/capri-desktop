@@ -892,7 +892,7 @@ export class Chat {
     this.host.log?.(`heard=${JSON.stringify(text)} tags=${JSON.stringify(tags)} fallback=${JSON.stringify(this.fallback)}`);
     const add = (r) => {
       if (!r) return;
-      if (r.line) lines.push(r.line);
+      if (r.line && !lines.includes(r.line)) lines.push(r.line); // the same complaint once, not once per tag
       if (r.face) face = r.face;
       if (r.confirm || r.files || r.settings || r.offer) after = r;
     };
