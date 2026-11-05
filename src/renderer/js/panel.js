@@ -119,7 +119,7 @@ export class Panel {
     // nor on a chat with her: only a permission prompt breaks in; Claude finishing waits until after
     // (even while she teleports and the panel is put aside for a moment). Her setup's panels with a
     // line to type in (a key) aren't a chat: its next step follows them.
-    if (cur?.chat && !cur.guide && !this.el.hidden && !this.leaving && PRIORITY[msg.kind] < 4) {
+    if (cur?.chat && !cur.guide && !this.leaving && PRIORITY[msg.kind] < 4) {
       if (PRIORITY[msg.kind] >= 3) this.missed = { ...msg, missedAt: performance.now() };
       return false;
     }

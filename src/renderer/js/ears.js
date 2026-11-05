@@ -4,7 +4,7 @@
 
 const WAKE = /(?<![\p{L}\p{N}])(?:(?:эй|хей|окей|ок|hey)[\s,]+)?(?:капри|каприй|капре|кэпри|кепри|копри|каприз|capri|kapri|capry)(?![\p{L}\p{N}])/iu;
 const JUNK = /^(?:продолжение следует|субтитры|спасибо за просмотр|редактор субтитров|музыка|аплодисменты|смех|угу|ага|м+|э+|а+|о+)[.!?…]*$/iu;
-const FOLLOW_MS = 15000; // after her answer, how long she listens without her name
+const FOLLOW_MS = 45000; // after her answer (and her chat opening), how long she listens without her name
 const WAKE_MS = 8000;    // after "Капри" alone
 
 function tidy(text) {
@@ -40,8 +40,8 @@ export class Ears {
   on(event = {}) {
     if (event.type === 'ready') {
       // her chat just opened: say it, no name needed
-      this.followUntil = performance.now() + 15000;
-      this.hint('🎙 Слушаю — говори', 15000);
+      this.followUntil = performance.now() + FOLLOW_MS;
+      this.hint('🎙 Слушаю — говори', FOLLOW_MS);
       return;
     }
     if (event.type === 'status' || event.type === 'error') {
@@ -106,8 +106,10 @@ export class Ears {
     // you're typing to her: what she heard isn't for her
     if (this.chat.open && this.panel.chatInput?.value.trim()) return;
     this.wakeUntil = 0;
-    if (this.busy) return;
+    // a phrase still being handled (her answer slow to come): never stuck on it for good
+    if (this.busy && performance.now() - this.busySince < 90000) return;
     this.busy = true;
+    this.busySince = performance.now();
     try {
       if (!this.chat.open) {
         await this.chat.start();

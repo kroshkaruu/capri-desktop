@@ -353,14 +353,26 @@ async function youtube(query) {
     const res = await fetch(search, {
       // the consent cookie skips Europe's cookie page, which would hide the results
       headers: { 'user-agent': UA, 'accept-language': 'en', cookie: 'CONSENT=YES+1; SOCS=CAI' },
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(15000),
     });
     const m = VIDEO.exec(await res.text());
     if (m) video = { id: m[1], title: JSON.parse(`"${m[2]}"`) };
   } catch {
-    // offline or YouTube changed its page: the search still opens
+    // slow or offline: a web search for the video next
   }
-  await shell.openExternal(video ? `https://www.youtube.com/watch?v=${video.id}` : search);
+  if (!video) {
+    // YouTube slowed down where you are: DuckDuckGo finds the video's page
+    try {
+      const res = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(`${q} site:youtube.com`)}`, { headers: { 'user-agent': UA }, signal: AbortSignal.timeout(10000) });
+      const html = await res.text();
+      const id = /youtube\.com%2Fwatch%3Fv%3D([\w-]{11})|youtube\.com\/watch\?v=([\w-]{11})/.exec(html);
+      const title = /<a[^>]+class="result__a"[^>]*>([\s\S]*?)<\/a>/.exec(html)?.[1]?.replace(/<[^>]+>/g, '').replace(/\s*-\s*YouTube\s*$/i, '').trim();
+      if (id) video = { id: id[1] || id[2], title: title || null };
+    } catch {
+      // the search page still opens
+    }
+  }
+  await shell.openExternal(video ? `https://www.youtube.com/watch?v=${video.id}&autoplay=1` : search);
   return { title: video?.title || null };
 }
 

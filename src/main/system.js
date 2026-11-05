@@ -304,8 +304,11 @@ async function appVolume(appName, value) {
   const now = Number.parseInt(await osa(`tell application ${quoted(which)} to sound volume`), 10);
   if (!Number.isFinite(now)) return { notOpen: true, app: which };
   let level = Number.parseInt(v, 10);
-  if (/up|громч|\+/.test(v) && !/^\d/.test(v)) level = now + 10;
-  if (/down|тише|-/.test(v) && !/^\d/.test(v)) level = now - 10;
+  const by = /^([+-])\s*(\d+)/.exec(v); // "-50": by that much, "50": to that level
+  if (by) level = now + (by[1] === '-' ? -1 : 1) * Number(by[2]);
+  else if (/up|громч/.test(v)) level = now + 10;
+  else if (/down|тише/.test(v)) level = now - 10;
+  else if (/half|вдвое|пополам/.test(v)) level = Math.round(now / 2);
   if (!Number.isFinite(level)) return { bad: true };
   level = Math.max(0, Math.min(100, level));
   await osa(`tell application ${quoted(which)} to set sound volume to ${level}`);
