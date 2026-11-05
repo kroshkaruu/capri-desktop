@@ -15,9 +15,10 @@ exec > >(tee -a "$LOG") 2>&1
 echo "== $(date) Капри: установка"
 
 if [ -z "$URL" ]; then
-  URL=$(curl -fsSL "https://api.github.com/repos/$REPO/releases?per_page=20" \
-    | grep -o '"browser_download_url": *"[^"]*capri-mac-[^"]*Capri-Mac-RU.zip"' \
-    | head -1 | sed 's/.*"\(https[^"]*\)"/\1/')
+  # самая свежая сборка: с наибольшим номером
+  URL=$(curl -fsSL "https://api.github.com/repos/$REPO/releases?per_page=100" \
+    | grep -o 'https://[^"]*/download/capri-mac-[0-9]*-[0-9]*/Capri-Mac-RU.zip' \
+    | sed 's|.*/capri-mac-[0-9]*-\([0-9]*\)/.*|\1 &|' | sort -n | tail -1 | cut -d' ' -f2)
 fi
 if [ -z "$URL" ]; then echo "Не нашла сборку на GitHub."; exit 1; fi
 echo "Скачиваю: $URL"

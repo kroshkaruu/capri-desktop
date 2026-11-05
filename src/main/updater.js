@@ -25,7 +25,7 @@ function current() {
 
 // { tag, url } of a newer build, or null
 async function check() {
-  const res = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=20`, {
+  const res = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=100`, {
     headers: { 'user-agent': 'Capri-Desktop', accept: 'application/vnd.github+json' },
     signal: AbortSignal.timeout(15000),
   });
