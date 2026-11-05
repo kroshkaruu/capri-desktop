@@ -1034,6 +1034,9 @@ export class Chat {
           if (what === 'status') return { line: 'Твой VPN не показывает системе, включён ли он. Загляни в его окно.', face: 'aside' };
           const res = await pc({ action: 'vpnApp', what });
           this.host.log?.(`vpnApp ${what}: ${JSON.stringify(res)}`);
+          if (res?.already) return { line: `${res.app}: и так ${res.on ? 'включён' : 'выключен'}.`, face: 'look' };
+          if (res?.clicked && res?.pressed) return { line: `${res.app}: ${res.on ? 'включила' : 'выключила'}.`, face: 'smug' };
+          if (res?.clicked) return { line: `${res.app}: щёлкнула переключатель, но подключение пока не ${what === 'on' ? 'поднялось' : 'упало'}. Глянь в его окно.`, face: 'aside' };
           if (res?.pressed) return { line: `${res.app}: нажала «${res.pressed}».`, face: 'smug' };
           if (res?.need) return { line: `Открыла ${res.app}, но нажать кнопку macOS мне не даёт: разреши Capri в Системные настройки → Конфиденциальность и безопасность → «Управление устройством и доступ к данным» (удали её там «−» и добавь заново «+»), потом перезапусти меня.`, face: 'aside' };
           if (res?.app) return { line: `Открыла ${res.app}, но кнопку ${what === 'off' ? 'отключения' : 'подключения'} в нём не нашла — нажми сам.`, face: 'aside' };

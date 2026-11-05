@@ -613,6 +613,42 @@ func press(_ appName: String, _ wanted: [String], _ avoid: [String]) -> String {
   return "{\"none\":true,\"seen\":[\(labels.prefix(40).map { json($0) }.joined(separator: ","))]}"
 }
 
+// clickwin <app name> <fx> <fy>: a real mouse click at a point of the app's window, as fractions of its
+// width and height (for switches drawn by the app itself, which macOS can't press). The app comes to the
+// front for it; the pointer goes back where it was.
+func clickWindow(_ appName: String, _ fx: Double, _ fy: Double) -> String {
+  guard AXIsProcessTrusted() else { return "{\"need\":\"accessibility\"}" }
+  let target = appName.lowercased()
+  guard let app = NSWorkspace.shared.runningApplications.first(where: {
+    ($0.localizedName ?? "").lowercased() == target || ($0.bundleURL?.deletingPathExtension().lastPathComponent ?? "").lowercased() == target
+  }) else { return "{\"noapp\":true}" }
+  app.unhide()
+  app.activate(options: [.activateIgnoringOtherApps])
+  usleep(500_000)
+  let ax = AXUIElementCreateApplication(app.processIdentifier)
+  var windows: CFTypeRef?
+  guard AXUIElementCopyAttributeValue(ax, kAXWindowsAttribute as CFString, &windows) == .success,
+        let list = windows as? [AXUIElement], let window = list.first else { return "{\"nowindow\":true}" }
+  var posRef: CFTypeRef?
+  var sizeRef: CFTypeRef?
+  AXUIElementCopyAttributeValue(window, kAXPositionAttribute as CFString, &posRef)
+  AXUIElementCopyAttributeValue(window, kAXSizeAttribute as CFString, &sizeRef)
+  var pos = CGPoint.zero
+  var size = CGSize.zero
+  if let p = posRef { AXValueGetValue(p as! AXValue, .cgPoint, &pos) }
+  if let z = sizeRef { AXValueGetValue(z as! AXValue, .cgSize, &size) }
+  guard size.width > 20, size.height > 20 else { return "{\"nowindow\":true}" }
+  let point = CGPoint(x: pos.x + size.width * fx, y: pos.y + size.height * fy)
+  let back = CGEvent(source: nil)?.location ?? point
+  let source = CGEventSource(stateID: .hidSystemState)
+  for type in [CGEventType.mouseMoved, .leftMouseDown, .leftMouseUp] {
+    CGEvent(mouseEventSource: source, mouseType: type, mouseCursorPosition: point, mouseButton: .left)?.post(tap: .cghidEventTap)
+    usleep(60_000)
+  }
+  CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: back, mouseButton: .left)?.post(tap: .cghidEventTap)
+  return "{\"clicked\":true,\"x\":\(Int(point.x)),\"y\":\(Int(point.y))}"
+}
+
 // ---------- main ----------
 
 let args = Array(CommandLine.arguments.dropFirst())
@@ -640,6 +676,11 @@ case "press":
   let wanted = (args.count > 2 ? args[2] : "").lowercased().split(separator: "|").map(String.init)
   let avoid = (args.count > 3 ? args[3] : "").lowercased().split(separator: "|").map(String.init)
   emit(press(name, wanted, avoid))
+case "clickwin":
+  let name = args.count > 1 ? args[1] : ""
+  let fx = args.count > 2 ? Double(args[2]) ?? 0.5 : 0.5
+  let fy = args.count > 3 ? Double(args[3]) ?? 0.5 : 0.5
+  emit(clickWindow(name, fx, fy))
 case "perms":
   emit("{\"screen\":\(CGPreflightScreenCaptureAccess()),\"accessibility\":\(AXIsProcessTrusted())}")
 case "ask-accessibility":

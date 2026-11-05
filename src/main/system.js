@@ -114,12 +114,36 @@ async function vpn(what = 'status', wanted = '') {
 // button pressed through Accessibility, by the button's name. { app, pressed } or { app, need }.
 const VPN_APPS = ['Red Shield VPN', 'Outline', 'Hiddify', 'AmneziaVPN', 'Amnezia', 'Proton VPN', 'NordVPN', 'Surfshark', 'ExpressVPN', 'Windscribe', 'Happ', 'V2Box', 'FoXray', 'Streisand'];
 
+// Where an app draws its own on/off switch, as fractions of its window (title bar included): macOS can't
+// press those, so it's a real click there. Red Shield VPN: the big switch in the middle.
+const VPN_SWITCH = { 'Red Shield VPN': [0.503, 0.514] };
+
+// A VPN up: a tunnel interface (utun, ipsec, ppp, tun) with an IPv4 address.
+function tunnelUp() {
+  return Object.entries(os.networkInterfaces()).some(([name, list]) => /^(utun|ipsec|ppp|tun|wg)/.test(name)
+    && (list || []).some((a) => a.family === 'IPv4' && !a.internal));
+}
+
 async function vpnApp(what = 'on') {
   let name = null;
   for (const candidate of VPN_APPS) {
     if (fs.existsSync(`/Applications/${candidate}.app`)) { name = candidate; break; }
   }
   if (!name) return null;
+  const before = tunnelUp();
+  if ((what === 'on' && before) || (what === 'off' && !before)) return { app: name, already: true, on: before };
+  if (VPN_SWITCH[name]) {
+    await run('open', ['-a', name]);
+    await new Promise((r) => setTimeout(r, 1500));
+    const [fx, fy] = VPN_SWITCH[name];
+    const res = await helperJson(['clickwin', name, String(fx), String(fy)], 15000).catch((err) => ({ error: err.message }));
+    if (res?.need) { helperJson(['ask-accessibility']).catch(() => {}); return { app: name, ...res }; }
+    let now = before;
+    for (let i = 0; i < 20 && now === before; i++) { await new Promise((r) => setTimeout(r, 500)); now = tunnelUp(); }
+    // out of the way again
+    osa(`tell application "System Events" to set visible of process "${name}" to false`);
+    return { app: name, ...res, pressed: now !== before ? 'переключатель' : null, on: now };
+  }
   await run('open', ['-a', name]);
   await new Promise((r) => setTimeout(r, 2500));
   const wanted = what === 'off'
