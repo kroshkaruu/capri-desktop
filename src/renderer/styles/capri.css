@@ -953,3 +953,159 @@ html[data-motion='reduced'] .panel__line.is-glitching,
 html[data-motion='reduced'] .panel[data-kind='alert'] .panel__state {
   animation: none !important;
 }
+
+/* ------------------------------------------------------------------
+   Her menu (menu.js), drawn like her chat: a near-black plate with a
+   neon yellow outline, a cyan copy knocked out of register, one corner
+   cut off, and "/// CAPRI.МЕНЮ" for a label.
+------------------------------------------------------------------- */
+.cmenu {
+  --frame: var(--yellow);
+  --echo: var(--cyan);
+  position: fixed;
+  z-index: 50;
+  width: 330px;
+  max-height: calc(100vh - 40px);
+  pointer-events: auto;
+  filter:
+    drop-shadow(2px 0 0 var(--frame)) drop-shadow(-2px 0 0 var(--frame))
+    drop-shadow(0 2px 0 var(--frame)) drop-shadow(0 -2px 0 var(--frame))
+    drop-shadow(5px 5px 0 var(--echo));
+  animation: cmenu-in 160ms var(--ease-out, ease-out);
+}
+
+.cmenu[hidden] { display: none; }
+
+@keyframes cmenu-in {
+  from { opacity: 0; transform: translateY(-6px) skewX(-3deg); }
+  to { opacity: 1; transform: none; }
+}
+
+.cmenu__plate {
+  max-height: inherit;
+  overflow-y: auto;
+  padding: 12px 10px 16px;
+  background:
+    repeating-linear-gradient(90deg, var(--ink-2) 0 2px, transparent 2px 3px, var(--ink-2) 3px 4px, transparent 4px 7px)
+      left 12px bottom 7px / 46px 5px no-repeat,
+    var(--ink);
+  clip-path: polygon(0 0, 57% 0, 59% 4px, 75% 4px, 77% 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%);
+  scrollbar-width: thin;
+  scrollbar-color: var(--yellow) transparent;
+}
+
+.cmenu__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 6px 10px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 6px;
+}
+
+.cmenu__who {
+  color: var(--cyan);
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  font-size: 13px;
+}
+
+.cmenu__who::before { content: '/// '; letter-spacing: 0; }
+
+.cmenu__tag {
+  color: var(--paper-3);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  margin-left: -6px;
+}
+
+.cmenu__tag::before { content: '.'; color: var(--cyan); }
+
+.cmenu__x {
+  margin-left: auto;
+  width: 26px;
+  height: 22px;
+  border: 0;
+  background: var(--ink);
+  box-shadow: inset 0 0 0 2px var(--cyan);
+  color: var(--cyan);
+  font-size: 12px;
+  cursor: pointer;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%);
+}
+
+.cmenu__x:hover { background: var(--cyan); color: var(--ink); }
+
+.cmenu__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cmenu__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-size: 14px;
+  line-height: 1.25;
+  cursor: pointer;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%);
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+
+.cmenu__item[data-depth='2'] { margin-left: 26px; }
+
+.cmenu__item[data-depth='1'],
+.cmenu__item[data-depth='2'] {
+  font-size: 13px;
+  color: var(--paper-2);
+  border-left: 2px solid var(--cyan);
+  margin-left: 10px;
+}
+
+.cmenu__item:hover {
+  background: var(--yellow);
+  color: var(--ink);
+}
+
+.cmenu__item.is-off {
+  color: var(--paper-3);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: default;
+}
+
+.cmenu__item.is-off:hover { background: none; color: var(--paper-3); }
+
+.cmenu__mark {
+  width: 12px;
+  flex: none;
+  color: var(--cyan);
+  font-size: 12px;
+  text-align: center;
+}
+
+.cmenu__item:hover .cmenu__mark { color: var(--ink); }
+
+.cmenu__label { flex: 1; }
+
+.cmenu__key,
+.cmenu__more {
+  color: var(--paper-3);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.cmenu__item:hover .cmenu__key,
+.cmenu__item:hover .cmenu__more { color: var(--ink); }
+
+.cmenu__sep {
+  height: 1px;
+  margin: 6px 6px;
+  background: var(--line);
+}

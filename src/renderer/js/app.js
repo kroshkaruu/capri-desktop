@@ -8,6 +8,7 @@ import { Guide } from './guide.js';
 import { Mission } from './mission.js';
 import { Chat } from './chat.js';
 import { Ears } from './ears.js';
+import { StyledMenu } from './menu.js';
 import { Setup } from './setup.js';
 import { Custom } from './custom.js';
 import { Bond, Jealousy } from './bond.js';
@@ -96,6 +97,7 @@ async function boot() {
   const brain = new Brain({ capri, panel, voice, host, mission, lang: config.lang, assistant: config.assistant });
 
   // Click-through everywhere except on her body, the panel and her biochip.
+  const menu = new StyledMenu({ host }); // her menu, like her chat
   let interactive = false;
   let mouse = null;
   const setInteractive = (on) => {
@@ -108,7 +110,9 @@ async function boot() {
     if (capri.dragging) return setInteractive(true);
     if (!mouse) return setInteractive(false);
     const r = panel.rect();
-    const onPanel = r && mouse.x >= r.left && mouse.x <= r.right && mouse.y >= r.top && mouse.y <= r.bottom;
+    const m = menu.rect();
+    const onPanel = (r && mouse.x >= r.left && mouse.x <= r.right && mouse.y >= r.top && mouse.y <= r.bottom)
+      || (m && mouse.x >= m.left - 4 && mouse.x <= m.right + 8 && mouse.y >= m.top - 4 && mouse.y <= m.bottom + 8);
     document.body.style.cursor = onChip() ? 'pointer' : '';
     return setInteractive(Boolean(onPanel || capri.hit(mouse.x, mouse.y) || onChip()));
   };

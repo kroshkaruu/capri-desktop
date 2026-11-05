@@ -424,7 +424,7 @@ function rebuildTray() {
   };
   const cancelReminder = (id) => updateConfig({ reminders: (config.load().reminders || []).filter((r) => r.id !== id) });
 
-  const menu = Menu.buildFromTemplate([
+  const template = [
     { label: t.online(PORT), enabled: false },
     { label: t.sync(Math.min(100, Math.floor(xp / 10)), t.stages[stage]), enabled: false },
     { type: 'separator' },
@@ -547,23 +547,6 @@ function rebuildTray() {
         label, type: 'radio', checked: cfg.rest === rest, click: () => updateConfig({ rest }),
       })),
     },
-    // the coding assistant she watches (a new one: she says hello and offers to plug herself in), or none
-    {
-      label: t.watch,
-      submenu: [
-        ...Object.entries(ASSISTANTS).map(([id, { name }]) => ({
-          label: name,
-          type: 'radio',
-          checked: cfg.claude && watched.id === id,
-          click: () => {
-            const other = watched.id !== id;
-            updateConfig({ claude: true, assistant: id, ...(other && { linked: false, welcomed: false }) });
-            if (other) sendCommand('assistantChanged');
-          },
-        })),
-        { label: t.watchNone, type: 'radio', checked: !cfg.claude, click: () => updateConfig({ claude: false }) },
-      ],
-    },
     {
       label: t.motion,
       submenu: [['auto', t.motionAuto], ['full', t.motionFull], ['reduced', t.motionReduced]].map(([motion, label]) => ({
@@ -592,9 +575,41 @@ function rebuildTray() {
     ] : []),
     { type: 'separator' },
     { label: t.quit, click: () => app.quit() },
-  ]);
-  tray.setContextMenu(menu);
+  ];
+  const menu = Menu.buildFromTemplate(template);
   trayMenu = menu;
+  styledMenu = serializeMenu(template);
+  if (styledOpen) overlay?.webContents.send('menu:show', { items: styledMenu.items, refresh: true });
+}
+
+// Her menu drawn like her chat (Night City), in her own window: the same items as the native one,
+// their clicks run here by id.
+let styledMenu = { items: [], clicks: new Map() };
+let styledOpen = false;
+function serializeMenu(template) {
+  const clicks = new Map();
+  let n = 0;
+  const walk = (items) => items.filter(Boolean).map((item) => {
+    if (item.type === 'separator') return { type: 'separator' };
+    const id = `m${n++}`;
+    if (item.click) clicks.set(id, item);
+    return {
+      id,
+      label: String(item.label || ''),
+      type: item.type || (item.submenu ? 'submenu' : 'normal'),
+      checked: Boolean(item.checked),
+      enabled: item.enabled !== false,
+      accelerator: item.accelerator ? String(item.accelerator).replace(/Ctrl|Control|CommandOrControl/, '⌃').replace(/Alt|Option/, '⌥').replace(/\+/g, '') : '',
+      submenu: Array.isArray(item.submenu) ? walk(item.submenu) : null,
+    };
+  });
+  return { items: walk(template), clicks };
+}
+
+function showStyledMenu(at) {
+  if (!overlay) return;
+  styledOpen = true;
+  overlay.webContents.send('menu:show', { items: styledMenu.items, at });
 }
 
 // Run from a clone (`npm start`), a login item would open the bare Electron app (it can't be given
@@ -838,7 +853,8 @@ function createTray() {
   const icon = nativeImage.createFromBuffer(fs.readFileSync(path.join(ROOT, 'assets', 'icons', 'tray.png')), { scaleFactor: 2 });
   tray = new Tray(icon);
   tray.setToolTip('Capri');
-  tray.on('click', () => sendCommand('status'));
+  tray.on('click', () => showStyledMenu('tray'));
+  tray.on('right-click', () => trayMenu && tray.popUpContextMenu(trayMenu));
   rebuildTray();
 }
 
@@ -875,7 +891,15 @@ function registerIpc() {
   ipcMain.handle('config:set', (_e, patch) => updateConfig(patch));
   ipcMain.handle('demo:window', (_e, open) => demoWindow(open));
   // right-clicking her: the same menu as her icon in the menu bar (which a crowded menu bar can hide)
-  ipcMain.on('menu:open', () => trayMenu?.popup({ window: overlay, callback: () => handBack() }));
+  ipcMain.on('menu:open', () => showStyledMenu('pointer'));
+  ipcMain.on('menu:closed', () => { styledOpen = false; handBack(); });
+  ipcMain.on('menu:click', (_e, id) => {
+    const item = styledMenu.clicks.get(String(id));
+    if (!item) return;
+    // a checkbox flips, a radio is picked, like the native menu's item hands its handler
+    const fake = { checked: item.type === 'checkbox' ? !item.checked : true };
+    try { item.click(fake); } catch (err) { console.error('[capri] menu', err); }
+  });
   // her welcome panel's buttons
   ipcMain.handle('hooks:install', () => runHooks('install', { quiet: true }));
   ipcMain.handle('claude:found', () => fs.existsSync(path.dirname(activeHooks().status().file))); // Claude Code keeps its settings there
