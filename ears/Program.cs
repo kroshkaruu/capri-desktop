@@ -130,6 +130,67 @@ internal static class Program
         [DllImport(Toolbox)] private static extern int AudioQueueStart(IntPtr queue, IntPtr startTime);
         [DllImport(Toolbox)] private static extern int AudioQueueStop(IntPtr queue, byte immediate);
         [DllImport(Toolbox)] private static extern int AudioQueueDispose(IntPtr queue, byte immediate);
+        [DllImport(Toolbox)] private static extern int AudioQueueSetProperty(IntPtr queue, uint id, ref IntPtr data, uint size);
+
+        // Bluetooth headphones whose mic is open drop to their "headset" sound, like a call. So when the Mac's
+        // input is Bluetooth, she listens through the Mac's own microphone and the headphones keep their sound.
+        private const string CoreAudio = "/System/Library/Frameworks/CoreAudio.framework/CoreAudio";
+        [StructLayout(LayoutKind.Sequential)] private struct Address { public uint Selector, Scope, Element; }
+        [DllImport(CoreAudio)] private static extern int AudioObjectGetPropertyDataSize(uint id, ref Address address, uint qualifierSize, IntPtr qualifier, out uint size);
+        [DllImport(CoreAudio)] private static extern int AudioObjectGetPropertyData(uint id, ref Address address, uint qualifierSize, IntPtr qualifier, ref uint size, IntPtr data);
+        private const uint Global = 0x676c6f62, Input = 0x696e7074;
+
+        private static uint Read(uint device, uint selector, uint scope = Global)
+        {
+            Address a = new Address { Selector = selector, Scope = scope };
+            uint size = 4;
+            IntPtr data = Marshal.AllocHGlobal(4);
+            try { return AudioObjectGetPropertyData(device, ref a, 0, IntPtr.Zero, ref size, data) == 0 ? (uint)Marshal.ReadInt32(data) : 0; }
+            finally { Marshal.FreeHGlobal(data); }
+        }
+
+        private static bool HasInput(uint device)
+        {
+            Address a = new Address { Selector = 0x73746d23, Scope = Input }; // 'stm#' on the input side
+            uint size;
+            return AudioObjectGetPropertyDataSize(device, ref a, 0, IntPtr.Zero, out size) == 0 && size > 0;
+        }
+
+        private static void PickDevice(IntPtr queue)
+        {
+            try
+            {
+                uint current = Read(1, 0x64496e20); // the Mac's default input ('dIn ')
+                uint transport = current == 0 ? 0 : Read(current, 0x7472616e); // 'tran'
+                // a USB or other mic picked on purpose stays; otherwise the Mac's own, even if headphones connect later
+                if (current != 0 && transport != 0x626c7565 && transport != 0x626c6561 && transport != 0x626c746e) return;
+                Address all = new Address { Selector = 0x64657623, Scope = Global }; // 'dev#'
+                uint size;
+                if (AudioObjectGetPropertyDataSize(1, ref all, 0, IntPtr.Zero, out size) != 0 || size == 0) return;
+                IntPtr list = Marshal.AllocHGlobal((int)size);
+                try
+                {
+                    if (AudioObjectGetPropertyData(1, ref all, 0, IntPtr.Zero, ref size, list) != 0) return;
+                    for (int i = 0; i < size / 4; i++)
+                    {
+                        uint device = (uint)Marshal.ReadInt32(list, i * 4);
+                        if (Read(device, 0x7472616e) != 0x626c746e || !HasInput(device)) continue; // built in ('bltn'), with a mic
+                        Address uidAt = new Address { Selector = 0x75696420, Scope = Global }; // 'uid '
+                        uint uidSize = (uint)IntPtr.Size;
+                        IntPtr uidBox = Marshal.AllocHGlobal(IntPtr.Size);
+                        try
+                        {
+                            if (AudioObjectGetPropertyData(device, ref uidAt, 0, IntPtr.Zero, ref uidSize, uidBox) != 0) continue;
+                            IntPtr uid = Marshal.ReadIntPtr(uidBox);
+                            if (uid != IntPtr.Zero && AudioQueueSetProperty(queue, 0x61716364, ref uid, (uint)IntPtr.Size) == 0) return; // 'aqcd'
+                        }
+                        finally { Marshal.FreeHGlobal(uidBox); }
+                    }
+                }
+                finally { Marshal.FreeHGlobal(list); }
+            }
+            catch (Exception) { }
+        }
 
         private readonly Action<float[]> heard;
         private readonly Action began;
@@ -168,6 +229,7 @@ internal static class Program
             };
             int status = AudioQueueNewInput(ref format, callback, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 0, out queue);
             if (status != 0) return "Не получилось открыть микрофон (код " + status + ").";
+            PickDevice(queue);
             for (int i = 0; i < 4; i++)
             {
                 IntPtr buffer;
