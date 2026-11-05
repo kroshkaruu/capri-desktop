@@ -26,17 +26,17 @@ const STAY_MS = 10 * 60 * 1000; // no wandering off mid-conversation
 const LOADING_AFTER_MS = 5000;
 const CLOSE_TAG = /\[\[\s*close\s*:?\s*([^\]]*)\]\]/i; // [[close: AM Music]] at the end of her answer
 // "close", "shut down", "ferme", "quitte", "cierra", "fecha", "закрой"... in any of her languages
-const CLOSE_ASK = /\b(close|shut|quit|kill|exit)|ferm|quitt|coupe|arr[êe]t|cierr|cerra|fech|закр|выключ/i;
+const CLOSE_ASK = /\b(close|shut|quit|kill|exit)|ferm|quitt|coupe|arr[êe]t|cierr|cerra|fech|закр|выключ|выйди из|убей|заверши/i;
 // her other tags: [[open: Spotify]], [[music: Bad Bunny]], [[media: next]], [[site: youtube.com]]
 const TAG = /\[\[\s*(open|music|media|site)\s*:\s*([^\]]*)\]\]/i;
 // "open", "launch", "ouvre", "lance", "abre", "открой"... in any of her languages
-const OPEN_ASK = /\b(open|launch|start|run)\b|ouvr|lance|démarre|abre|abrir|inicia|ejecuta|executa|открой|запусти/i;
+const OPEN_ASK = /\b(open|launch|start|run)\b|ouvr|lance|démarre|abre|abrir|inicia|ejecuta|executa|откр[оы]|запуст|запуск|включи\s+(?!музык|песн|трек|звук)/i;
 // what to do with the music playing, said plainly (only when it's about music, or said in a few words)
 const MEDIA_ASK = [
-  ['pause', /\b(pause|pausa|pausar)\b|stop (the )?music|arrête la musique|пауз/i],
-  ['next', /\b(next|skip|suivante?|siguiente|próxima|proxima)\b|passe (à )?la suivante|salta|pula|следующ/i],
-  ['previous', /\b(previous|précédente?|anterior)\b|предыдущ/i],
-  ['play', /\b(resume|reprends|reanuda|retoma)\b|relance la musique|remets la musique|продолж/i],
+  ['pause', /\b(pause|pausa|pausar)\b|stop (the )?music|arrête la musique|пауз|останови музык|выключи музык|стоп музык/i],
+  ['next', /\b(next|skip|suivante?|siguiente|próxima|proxima)\b|passe (à )?la suivante|salta|pula|следующ|переключи (?:песн|трек)|дальше/i],
+  ['previous', /\b(previous|précédente?|anterior)\b|предыдущ|верни (?:песн|трек)|назад/i],
+  ['play', /\b(resume|reprends|reanuda|retoma)\b|relance la musique|remets la musique|продолж|сними с паузы|включи музыку$/i],
   ['volup', /\b(louder|plus fort)\b|monte le son|turn (it )?up|sube el volumen|aumenta o volume|громче/i],
   ['voldown', /\b(quieter|moins fort)\b|baisse le son|turn (it )?down|baja el volumen|abaixa o volume|тише/i],
   ['mute', /\bmute\b|coupe le son|silencia|sem som|выключи звук/i],
@@ -92,7 +92,7 @@ const SETTINGS_PAGES = [
 // what's left of it: asked as a question
 const INFO_ASK = [
   ['battery', /batterie|battery|bater[ií]a|заряд|батаре/i],
-  ['disk', /disque|\bdisk\b|\bdrive\b|stockage|storage|espace (?:libre|disque|restant)|de (?:la )?place|space left|free space|espacio|\bdisco\b|espa[çc]o|диск|места/i],
+  ['disk', /disque|\bdisk\b|\bdrive\b|stockage|storage|espace (?:libre|disque|restant)|de (?:la )?place|space left|free space|espacio|\bdisco\b|espa[çc]o|диск(?!орд)|места/i],
   ['ram', /\bram\b|m[ée]moire|memory|memoria|mem[óo]ria|памят|озу/i],
   ['ip', /\bip\b|айпи/i],
 ];
@@ -102,7 +102,7 @@ const VOLUME_ASK = /(?:\bson\b|volume|\bsound\b|volumen|\bsom\b|звук|гро�
 const MUTE_ASK = /coupe le son|mets? (?:le son )?en muet|\bmute\b|silencia|tira o som|sem som|выключи звук/i;
 const UNMUTE_ASK = /remets? le son|r[ée]active le son|unmute|sound (?:back )?on|quita el silencio|activa el sonido|volta o som|liga o som|включи звук/i;
 // a timer, counted down in her ticker
-const TIMER_ASK = /minuteur|\btimer\b|temporizador|cron[oó]metro|таймер/i;
+const TIMER_ASK = /minuteur|\btimer\b|temporizador|cron[oó]metro|таймер|засеки|засечь/i;
 // Windows' snip of an area (not her own screenshot of all of it)
 const SNIP_ASK = /capture (?:d['’])?une (?:zone|partie)|zone de l['’][ée]cran|\bsnip\b|(?:capture|screenshot|captura) (?:of |de )?(?:an? |una |uma |la |a )?(?:area|region|part|zona|[aá]rea|parte)|снимок области|область экрана/i;
 // its windows: out of the way, back, or side by side
@@ -814,7 +814,8 @@ export class Chat {
   // her tag asks for, if your message (text) asked for that kind of thing.
   async after(raw, answer, asked, early, text) {
     const { t } = this;
-    const done = early && (await early);
+    const done = early && (await early.catch((err) => { this.host.log?.(`doNow failed: ${err?.message || err}`); return null; }));
+    this.host.log?.(`heard=${JSON.stringify(text)} asked=${JSON.stringify(asked)} done=${JSON.stringify(done && { line: done.line, offer: Boolean(done.offer) })} raw=${JSON.stringify(String(raw).slice(-160))}`);
     if (done?.reminder) {
       // a reminder set: a button to take it back, right there
       this.addLine(answer, done.line, done.face);
@@ -854,14 +855,14 @@ export class Chat {
     if (done) return this.addLine(answer, done.line, done.face);
     if (asked?.kind === 'remind') return undefined; // no time said: her answer asks when
     if (asked?.kind === 'close') return this.offerClose(asked.name, answer);
-    if (asked && asked.kind !== 'open') return undefined; // music that didn't work out: nothing more to offer
+    if (asked && asked.kind !== 'open' && !trusted()) return undefined; // music that didn't work out: nothing more to offer
     const closeTag = tagged(raw);
-    if (closeTag) return wanted('close', text) ? this.offerClose(closeTag, answer) : undefined;
+    if (closeTag) return trusted() || wanted('close', text) ? this.offerClose(closeTag, answer) : undefined;
     const tag = TAG.exec(raw);
     if (!tag) return undefined;
     const kind = tag[1].toLowerCase();
     const value = tag[2].trim();
-    if (!value || !wanted(kind, text)) return undefined;
+    if (!value || !(trusted() || wanted(kind, text))) return undefined;
     if (kind === 'media') return MEDIA_ACTIONS.has(value.toLowerCase()) ? this.media(value.toLowerCase(), answer) : undefined;
     // a song she picked: on YouTube, the right video (on Spotify if that's what you said)
     if (kind === 'music') return /spotify/i.test(text) ? this.music(value, answer) : this.playOn(value, answer);
@@ -889,6 +890,7 @@ export class Chat {
   async launch(item, answer, { now = false } = {}) {
     const { t } = this;
     if (!this.open || this.turn) return;
+    if (!now && trusted() && !item.risky) now = true;
     if (!now) {
       this.panel.setActions(
         [{ id: 'open', label: fmt(t.openIt, { app: this.nameOf(item) }), primary: true }, { id: 'no', label: t.no }],
@@ -931,6 +933,10 @@ export class Chat {
       return;
     }
     if (!this.open || this.turn || !host.includes('.')) return;
+    if (trusted()) {
+      this.host.openSite(address).then((ok) => ok && this.addLine(answer, fmt(t.siteOpened, { site: host })));
+      return;
+    }
     this.panel.setActions(
       [{ id: 'site', label: fmt(t.siteIt, { site: host }), primary: true }, { id: 'no', label: t.no }],
       async (id) => {
@@ -952,7 +958,10 @@ export class Chat {
         if (name.length >= 3 && said.includes(name) && (!best || name.length > best.length)) best = { app, length: name.length };
       }
     }
-    return best?.app.name || null;
+    if (best) return best.app.name;
+    // "закрой телеграм": whatever follows the verb, for main.js to find among the open apps (Russian names too)
+    const rest = text.replace(/^.*?(?:закрой|закрыть|закроешь|выключи|выйди из|убей|заверши|close|quit)\s+/i, '').replace(/[.!?]+$/, '').trim();
+    return trusted() && rest && rest !== text.trim() && rest.split(/\s+/).length <= 3 ? rest : null;
   }
 
   // She was asked to close an app: a button with its name, and nothing happens until you click it.
@@ -964,6 +973,7 @@ export class Chat {
       this.panel.stream(`${answer}\n${fmt(t.notFound, { app: wanted })}`, { done: true });
       return;
     }
+    if (trusted()) return this.closeApp(app);
     this.panel.setActions(
       [{ id: 'close', label: fmt(t.closeIt, { app: app.name }), primary: true }, { id: 'no', label: t.no }],
       (id) => (id === 'close' ? this.closeApp(app) : this.panel.setActions([])),
@@ -998,11 +1008,11 @@ export class Chat {
   // What she can do on the PC when you ask (Windows), and nothing else.
   powers() {
     const lines = [
-      'Only when the user asks you to open an app, a game, a file or folder on their desktop, or a folder like Downloads, to play music, to control the music playing, or to open a website: say in a few words that you will, and end your answer with one tag: [[open: NAME]], [[music: ARTIST - SONG]] (it plays on YouTube; if they did not say which song, pick one that fits), [[media: ACTION]] (ACTION: pause, play, next, previous, volup, voldown or mute), or [[site: ADDRESS]]. Some of these get a button to confirm, so never say it is already done. Any other time, write no tag at all: there are no other tags.',
+      'Only when the user asks you to open an app, a game, a file or folder on their desktop, or a folder like Downloads, to play music, to control the music playing, or to open a website: say in a few words that you will, and end your answer with one tag: [[open: NAME]], [[music: ARTIST - SONG]] (it plays on YouTube; if they did not say which song, pick one that fits), [[media: ACTION]] (ACTION: pause, play, next, previous, volup, voldown or mute), or [[site: ADDRESS]]. Your system does it right away from your tag: never mention buttons, never ask them to click or confirm anything, never say a button will appear. Any other time, write no tag at all: there are no other tags.',
     ];
     if (this.apps.length) {
       const open = this.apps.map(({ name, label }) => (label && label !== name ? `${name} (${label})` : name)).join(', ');
-      lines.push(`You can also close an app that's open, only when they ask you to: end your answer with [[close: NAME]], NAME being the exact name from this list (the part before the parentheses). They get a button to confirm it. Apps open right now: ${open}.`);
+      lines.push(`You can also close an app that's open, only when they ask you to: end your answer with [[close: NAME]], NAME being the exact name from this list (the part before the parentheses). It closes right away, no button. Apps open right now: ${open}.`);
     }
     if (this.reminders) {
       lines.push('You keep reminders for the user: when they ask you to remind them of something at a given time, your system sets it from their message as they send it (a line under your answer shows it). Just confirm it in a few words, in character, and never say you can\'t. If they didn\'t say when, ask them when.');
@@ -1010,7 +1020,8 @@ export class Chat {
       if (soon.length) lines.push(`Reminders you're keeping for them: ${soon.map((r) => `${clock(r.at, this.brain.lang)}${r.text ? ` (${r.text})` : ''}`).join('; ')}.`);
     }
     lines.push('Your system also searches the user\'s files when they ask you to find one, searches the web when they ask, takes screenshots, and starts Roblox games by name: what it did shows under your answer, so never make up file names or results.');
-    lines.push('Apart from that, you can\'t see the user\'s screen or files, and you can\'t touch anything else on their PC (settings, files): if asked, say plainly that you can\'t, in character, and don\'t pretend to.');
+    lines.push('Your system also handles by itself, from their message: timers ("поставь таймер на 10 минут"), the volume ("громкость 30", "выключи звук"), dark or light mode, opening a settings page, battery and disk space, a screenshot of an area, hiding all windows, and locking, sleeping, shutting down or restarting the Mac (those last ones ask for a click). What it did shows under your answer: just answer in a few words, in character, and never mention buttons for anything else.');
+    lines.push('Apart from that, you can\'t see the user\'s screen or files: if asked something else on their computer, say plainly that you can\'t, in character, and don\'t pretend to.');
     return lines;
   }
 
@@ -1127,6 +1138,8 @@ function wanted(kind, text) {
   if (kind === 'close') return CLOSE_ASK.test(text);
   return OPEN_ASK.test(text) || PLAY.test(text); // an app, or a game to play
 }
+// on a Mac, in Russian, her tag is trusted: only you talk to her, and the many ways to ask can't all be listed
+const trusted = () => navigator.platform?.startsWith('Mac') || /Mac/.test(navigator.userAgent || '');
 
 // The app named by her close tag: [[close: AM Music]], or a sloppier [[close]] AM Music.
 function tagged(text) {

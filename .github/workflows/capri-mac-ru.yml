@@ -30,7 +30,7 @@ jobs:
           mkdir -p logs
           dotnet publish ears/CapriEars.csproj -c Release -r osx-arm64 --self-contained -o ears/out -p:DebugType=none -clp:ErrorsOnly 2>&1 | tee logs/build.log
           find ears/out/runtimes -mindepth 1 -maxdepth 1 -type d ! -name macos-arm64 -exec rm -rf {} + || true
-          curl -sSL --retry 3 -o ears/out/ggml-small-q5_1.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin
+          curl -sSL --retry 3 -o ears/out/ggml-large-v3-turbo-q5_0.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin
           chmod +x ears/out/CapriEars
           ls -la ears/out > /tmp/earsls.txt; head -20 /tmp/earsls.txt >> logs/build.log
       - name: Signing tool

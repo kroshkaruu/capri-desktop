@@ -9,7 +9,7 @@ const path = require('node:path');
 const { spawn } = require('node:child_process');
 const { app, systemPreferences } = require('electron');
 
-const MODEL = 'ggml-small-q5_1.bin';
+const MODEL = 'ggml-large-v3-turbo-q5_0.bin';
 const MODEL_URL = `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${MODEL}`;
 
 let child = null;

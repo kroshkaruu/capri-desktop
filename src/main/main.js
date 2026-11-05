@@ -727,6 +727,14 @@ function registerIpc() {
   ipcMain.handle('demo:window', (_e, open) => demoWindow(open));
   // right-clicking her: the same menu as the tray icon (which Windows often hides behind the ^ by the clock)
   ipcMain.on('menu:open', () => trayMenu?.popup({ window: overlay }));
+  // what she heard and did, for working out what went wrong (Library/Application Support/Capri/capri-debug.log)
+  ipcMain.on('debug:log', (_e, line) => {
+    try {
+      const file = path.join(app.getPath('userData'), 'capri-debug.log');
+      if (fs.existsSync(file) && fs.statSync(file).size > 2_000_000) fs.renameSync(file, `${file}.old`);
+      fs.appendFileSync(file, `${new Date().toISOString()} ${line}\n`);
+    } catch { /* never mind */ }
+  });
   // her welcome panel's buttons
   ipcMain.handle('hooks:install', () => runHooks('install', { quiet: true }));
   ipcMain.handle('claude:found', () => fs.existsSync(path.dirname(activeHooks().status().file))); // Claude Code keeps its settings there

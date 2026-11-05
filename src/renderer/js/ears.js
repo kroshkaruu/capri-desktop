@@ -79,6 +79,7 @@ export class Ears {
 
   async phrase(heard) {
     const text = heard.trim();
+    this.host.log?.(`ears heard: ${JSON.stringify(text)}`);
     if (!text || JUNK.test(text)) return;
     const command = woke(text);
     const now = performance.now();

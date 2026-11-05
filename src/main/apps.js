@@ -80,6 +80,12 @@ async function find(wanted) {
   const key = simple(wanted);
   if (key.length < 2) return null;
   const apps = await list();
+  if (MAC) {
+    // "телеграм" is Telegram Lite: her Russian names for apps, then any word of the name
+    const said = require('./launch').russianNames(wanted).toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= 3);
+    const hit = apps.find((app) => said.some((w) => simple(app.name).includes(simple(w)) || simple(w).includes(simple(app.name))));
+    if (hit) return hit;
+  }
   const score = (app) => {
     const names = [simple(app.name), simple(app.label)].filter(Boolean);
     if (names.includes(key)) return 3;

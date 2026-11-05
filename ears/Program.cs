@@ -30,7 +30,7 @@ internal static class Program
     private static int Main(string[] args)
     {
         Console.OutputEncoding = new UTF8Encoding(false);
-        string model = args.Length > 0 ? args[0] : "ggml-small-q5_1.bin";
+        string model = args.Length > 0 ? args[0] : "ggml-large-v3-turbo-q5_0.bin";
         string url = args.Length > 1 ? args[1] : null;
         new Thread(() => { try { while (Console.In.ReadLine() != null) { } } catch (Exception) { } Environment.Exit(0); }) { IsBackground = true }.Start();
         try
@@ -38,7 +38,7 @@ internal static class Program
             if (!File.Exists(model))
             {
                 if (url == null) { Emit("error", "Не найден модуль распознавания речи.", "no_model"); return 2; }
-                Emit("status", "Скачиваю модуль распознавания речи (≈180 МБ), это один раз...");
+                Emit("status", "Скачиваю модуль распознавания речи (≈550 МБ), это один раз...");
                 Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(model)));
                 using (HttpClient client = new HttpClient { Timeout = TimeSpan.FromMinutes(30) })
                 using (Stream source = client.GetStreamAsync(url).GetAwaiter().GetResult())
@@ -49,7 +49,7 @@ internal static class Program
             using (WhisperFactory factory = WhisperFactory.FromPath(model))
             using (WhisperProcessor processor = factory.CreateBuilder()
                 .WithLanguage("ru")
-                .WithPrompt("Капри, открой Телеграм. Капри, поставь таймер на 10 минут.")
+                .WithPrompt("Привет, Капри.")
                 .WithThreads(Math.Max(2, Math.Min(6, Environment.ProcessorCount - 2)))
                 .WithNoContext()
                 .WithSingleSegment()
@@ -84,6 +84,7 @@ internal static class Program
         Task.Run(async () => { await foreach (SegmentData segment in processor.ProcessAsync(clip)) parts.Add(segment.Text); }).GetAwaiter().GetResult();
         string text = Regex.Replace(string.Join(" ", parts), @"\s+", " ").Trim();
         text = Regex.Replace(text, @"^[\[\(].*?[\]\)]$", "");
+        if (Regex.IsMatch(text, @"^(?:привет,? капри)[.!]?$", RegexOptions.IgnoreCase)) return "";
         if (Regex.IsMatch(text, @"^(?:продолжение следует|субтитры|редактор субтитров|спасибо за просмотр|подписывайтесь|ставьте лайки|музыка|аплодисменты|смех|\.+|…+)", RegexOptions.IgnoreCase)) return "";
         return text;
     }
@@ -234,7 +235,7 @@ internal static class Program
             }
             speech.AddRange(frame);
             quietFrames = loud ? 0 : quietFrames + 1;
-            bool ended = quietFrames >= 24; // ~0,7 с тишины
+            bool ended = quietFrames >= 30; // ~0,9 с тишины
             bool tooLong = speech.Count >= Rate * 15;
             if (!ended && !tooLong) return;
             talking = false;

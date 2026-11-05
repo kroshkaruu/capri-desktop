@@ -381,4 +381,4 @@ async function site(address) {
   return true;
 }
 
-module.exports = { launchables, match, find, launch, media, music, youtube, roblox, site, siteUrl, risky };
+module.exports = { russianNames, launchables, match, find, launch, media, music, youtube, roblox, site, siteUrl, risky };
