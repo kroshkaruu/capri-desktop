@@ -209,6 +209,109 @@ return "ok"`, 15000);
   return out === null ? { need: 'automation' } : { made: true, title: name };
 }
 
+// ---------- inside apps: their keys, their menus, their own volume ----------
+
+const apps = () => require('./apps');
+const BROWSERS = ['Zen', 'Google Chrome', 'Safari', 'Firefox', 'Arc', 'Yandex', 'Opera', 'Brave Browser', 'Microsoft Edge', 'Vivaldi'];
+const KEY_CODES = { tab: 48, return: 36, enter: 36, esc: 53, escape: 53, space: 49, left: 123, right: 124, down: 125, up: 126, delete: 51, backspace: 51, pageup: 116, pagedown: 121, home: 115, end: 119, f5: 96 };
+const LETTER_CODES = { a: 0, s: 1, d: 2, f: 3, h: 4, g: 5, z: 6, x: 7, c: 8, v: 9, b: 11, q: 12, w: 13, e: 14, r: 15, y: 16, t: 17, 1: 18, 2: 19, 3: 20, 4: 21, 6: 22, 5: 23, '=': 24, 9: 25, 7: 26, '-': 27, 8: 28, 0: 29, ']': 30, o: 31, u: 32, '[': 33, i: 34, p: 35, l: 37, j: 38, "'": 39, k: 40, ';': 41, '\\': 42, ',': 43, '/': 44, n: 45, m: 46, '.': 47, '`': 50 };
+const MODS = { cmd: 'command down', command: 'command down', '⌘': 'command down', shift: 'shift down', '⇧': 'shift down', alt: 'option down', opt: 'option down', option: 'option down', '⌥': 'option down', ctrl: 'control down', control: 'control down', '⌃': 'control down' };
+// never these, whatever app: what quits, logs out, shuts down, empties or erases
+const NEVER_KEYS = new Set(['cmd+q', 'cmd+shift+q', 'cmd+opt+esc', 'cmd+alt+esc', 'ctrl+cmd+q', 'cmd+shift+delete', 'cmd+opt+shift+q', 'cmd+delete', 'cmd+backspace']);
+const NEVER_MENU = /выключ|перезагру|завершить сеанс|выйти из|log ?out|shut ?down|restart|sleep|сон|удал|delete|стере|erase|очистить корзин|empty trash|format|формат/i;
+
+async function processOf(name) {
+  if (!name) return null;
+  const app = await apps().find(String(name)).catch(() => null);
+  return app?.process || null;
+}
+
+// the browser you're on, else the first one running
+async function browser() {
+  const front = await osa('tell application "System Events" to get name of first application process whose frontmost is true');
+  if (front && BROWSERS.some((b) => front.toLowerCase().includes(b.toLowerCase()))) return front;
+  for (const b of BROWSERS) {
+    const running = await osa(`tell application "System Events" to exists (first application process whose name contains ${quoted(b)})`);
+    if (running === 'true') return osa(`tell application "System Events" to get name of first application process whose name contains ${quoted(b)}`);
+  }
+  return null;
+}
+
+function keystroke(combo) {
+  const parts = String(combo).toLowerCase().replace(/\s+/g, '').split('+').filter(Boolean);
+  const key = parts.pop();
+  const mods = parts.map((m) => MODS[m]).filter(Boolean);
+  if (!key) return null;
+  const using = mods.length ? ` using {${mods.join(', ')}}` : '';
+  if (KEY_CODES[key] !== undefined) return `key code ${KEY_CODES[key]}${using}`;
+  // by the key's place, not its letter: with the Russian layout on, "k" would type something else
+  if (LETTER_CODES[key] !== undefined) return `key code ${LETTER_CODES[key]}${using}`;
+  if (key.length === 1) return `keystroke ${quoted(key)}${using}`;
+  return null;
+}
+
+async function keys(appName, combo) {
+  const normalized = String(combo).toLowerCase().replace(/\s+/g, '').replace('command', 'cmd').replace('option', 'opt').replace('control', 'ctrl');
+  if (NEVER_KEYS.has(normalized)) return { refused: true };
+  const stroke = keystroke(combo);
+  if (!stroke) return { bad: true };
+  const proc = appName ? await processOf(appName) : null;
+  if (appName && !proc) return { notOpen: true };
+  const out = await osa(`tell application "System Events"
+  ${proc ? `set frontmost of process ${quoted(proc)} to true
+  delay 0.3` : ''}
+  ${stroke}
+end tell
+return "ok"`, 10000);
+  return out === null ? { need: 'accessibility' } : { done: true, app: proc };
+}
+
+// a browser tab: next, previous, close, new, reopen, reload, back, forward, or its number
+const TABS = { next: 'ctrl+tab', previous: 'ctrl+shift+tab', prev: 'ctrl+shift+tab', close: 'cmd+w', new: 'cmd+t', reopen: 'cmd+shift+t', reload: 'cmd+r', back: 'cmd+[', forward: 'cmd+]' };
+async function tab(what) {
+  const b = await browser();
+  if (!b) return { noBrowser: true };
+  const w = String(what).toLowerCase().trim();
+  const combo = TABS[w] || (/^[1-9]$/.test(w) ? `cmd+${w}` : null);
+  if (!combo) return { bad: true };
+  const r = await keys(b, combo);
+  return { ...r, app: b };
+}
+
+// a menu item: "File > New Window" (or "Файл > Новое окно"), clicked by its titles
+async function menu(appName, path) {
+  const steps = String(path).split(/\s*[>›→]\s*/).map((t) => t.trim()).filter(Boolean);
+  if (steps.length < 2 || steps.length > 3) return { bad: true };
+  if (steps.some((t) => NEVER_MENU.test(t))) return { refused: true };
+  const proc = await processOf(appName);
+  if (!proc) return { notOpen: true };
+  const [top, second, third] = steps;
+  const target = third
+    ? `menu item ${quoted(third)} of menu 1 of menu item ${quoted(second)} of menu 1 of menu bar item ${quoted(top)} of menu bar 1`
+    : `menu item ${quoted(second)} of menu 1 of menu bar item ${quoted(top)} of menu bar 1`;
+  const out = await osa(`tell application "System Events" to tell process ${quoted(proc)}
+  set frontmost to true
+  click ${target}
+end tell
+return "ok"`, 10000);
+  return out === null ? { failed: true, app: proc } : { done: true, app: proc };
+}
+
+// Spotify's or Music's own volume: a level, or up and down by 10
+async function appVolume(appName, value) {
+  const which = /музык|music/i.test(appName) && !/spotify|спотиф/i.test(appName) ? 'Music' : 'Spotify';
+  const v = String(value).toLowerCase();
+  const now = Number.parseInt(await osa(`tell application ${quoted(which)} to sound volume`), 10);
+  if (!Number.isFinite(now)) return { notOpen: true, app: which };
+  let level = Number.parseInt(v, 10);
+  if (/up|громч|\+/.test(v) && !/^\d/.test(v)) level = now + 10;
+  if (/down|тише|-/.test(v) && !/^\d/.test(v)) level = now - 10;
+  if (!Number.isFinite(level)) return { bad: true };
+  level = Math.max(0, Math.min(100, level));
+  await osa(`tell application ${quoted(which)} to set sound volume to ${level}`);
+  return { done: true, app: which, level };
+}
+
 function act(req = {}) {
   switch (req.action) {
     case 'settings': return settings(String(req.page));
@@ -221,6 +324,10 @@ function act(req = {}) {
     case 'vpn': return vpn(String(req.what || 'status'), String(req.name || ''));
     case 'vpnApp': return vpnApp(String(req.what || 'on'));
     case 'note': return note(req.title, req.text, Boolean(req.append));
+    case 'keys': return keys(String(req.app || ''), String(req.combo || ''));
+    case 'tab': return tab(String(req.what || ''));
+    case 'menu': return menu(String(req.app || ''), String(req.path || ''));
+    case 'appVolume': return appVolume(String(req.app || ''), String(req.value || ''));
     default: return null;
   }
 }

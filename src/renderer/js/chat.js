@@ -168,6 +168,9 @@ const PROTOCOL_RUN = /^(?:капри,?\s+)?(?:(?:запусти|выполни|�
 const NUMBER_WORDS = { один: '1', одна: '1', первый: '1', два: '2', второй: '2', три: '3', третий: '3', четыре: '4', четвёртый: '4', четвертый: '4', пять: '5', пятый: '5', шесть: '6', семь: '7', восемь: '8', девять: '9', десять: '10' };
 const protocolName = (word) => { const w = String(word).toLowerCase().replace(/[.,!?]+$/, ''); return NUMBER_WORDS[w] || w; };
 
+// "закрой чат", "пока, закрой диалог", "убери окно": her chat closes
+const CLOSE_CHAT = /^(?:капри,?\s+)?(?:(?:ладно|всё|все|пока|спасибо),?\s+)?(?:закрой|закрыть|убери|скрой|сверни)\s+(?:этот\s+|наш\s+)?(?:чат|диалог|окно\s+(?:чата|диалога)|переписку)[.!]*$/iu;
+
 // 1 ч 30 мин, 10 мин, 45 с
 function span(ms) {
   const sec = Math.round(ms / 1000);
@@ -303,6 +306,11 @@ export class Chat {
 
   async send(text) {
     if (this.turn || !this.open) return;
+    if (CLOSE_CHAT.test(String(text).trim())) {
+      this.panel.hide(); // her chat goes, and her ears with it (close)
+      this.close();
+      return;
+    }
     const id = Date.now();
     this.turn = id;
     this.answer = '';
@@ -947,6 +955,39 @@ export class Chat {
         if (r.none) return { line: `Не нашла заметку «${r.title}».`, face: 'aside' };
         return { line: r.added ? `Дописала в заметку «${r.title}».` : `Записала в «Заметки»: «${r.title}».`, face: 'smug' };
       }
+      case 'chat': {
+        // [[chat: close]]: her chat goes once this answer has been read
+        setTimeout(() => { if (this.open && !this.turn) { this.panel.hide(); this.close(); } }, 2500);
+        return null;
+      }
+      case 'tab': {
+        const r = await pc({ action: 'tab', what: v });
+        if (!r || r.bad) return null;
+        if (r.noBrowser) return { line: 'Браузер не открыт.', face: 'aside' };
+        if (r.need) return { line: 'Нажать клавиши мне не дали: разреши Capri в «Управление устройством и доступ к данным».', face: 'aside' };
+        const said = { next: 'Следующая вкладка.', previous: 'Предыдущая вкладка.', prev: 'Предыдущая вкладка.', close: 'Закрыла вкладку.', new: 'Новая вкладка.', reopen: 'Вернула закрытую вкладку.', reload: 'Обновила страницу.', back: 'Назад.', forward: 'Вперёд.' }[v] || `Вкладка ${v}.`;
+        return { line: said, face: 'smug' };
+      }
+      case 'keys':
+      case 'menu': {
+        const [app, ...rest] = value.split('|');
+        const what = rest.join('|').trim();
+        if (!what) return null;
+        const r = await pc(kind === 'keys' ? { action: 'keys', app: app.trim(), combo: what } : { action: 'menu', app: app.trim(), path: what });
+        if (!r || r.bad) return null;
+        if (r.refused) return { line: 'Это я нажимать не буду: слишком опасно.', face: 'many' };
+        if (r.notOpen) return { line: fmt(t.notFound, { app: app.trim() }), face: 'aside' };
+        if (r.need) return { line: 'Нажать клавиши мне не дали: разреши Capri в «Управление устройством и доступ к данным».', face: 'aside' };
+        if (r.failed) return { line: `В ${r.app} не нашла пункт «${what}».`, face: 'aside' };
+        return { line: kind === 'keys' ? `${r.app || 'Готово'}: нажала ${what}.` : `${r.app}: ${what}.`, face: 'smug' };
+      }
+      case 'app_volume': {
+        const [app, ...rest] = value.split('|');
+        const r = await pc({ action: 'appVolume', app: app.trim(), value: rest.join('|').trim() });
+        if (!r || r.bad) return null;
+        if (r.notOpen) return { line: `${r.app} не запущен.`, face: 'aside' };
+        return { line: `${r.app}: громкость ${r.level}%.`, face: 'smug' };
+      }
       case 'hide': {
         if (!value) return null;
         const app = await this.host.findApp(value);
@@ -1085,6 +1126,11 @@ export class Chat {
       + '[[open: NAME]] open an app or a game by its real macOS name in English (Заметки = Notes, Часы = Clock, Календарь = Calendar, Настройки = System Settings, Музыка = Music, Фото = Photos, Сообщения = Messages, Карты = Maps, Калькулятор = Calculator, Почта = Mail, Напоминания = Reminders, Телеграм = Telegram, Хром = Google Chrome, Клод = Claude, the Claude desktop app, ЧатГПТ = ChatGPT, Браузер = Browser, their default browser), or a folder: Downloads, Documents, Desktop, Pictures, Finder, Trash\n'
       + '[[close: NAME]] quit an app (same names): only for "закрой", "выключи", "выйди из"\n'
       + '[[note: TITLE | TEXT]] write a new note in Notes ("запиши в заметки…", "сделай заметку…", "запиши список покупок"); [[note_add: TITLE | TEXT]] add text to the end of an existing note found by its title ("допиши в заметку про покупки молоко"). Write the note\'s text yourself in full, neatly, with line breaks as \\n if needed.\n'
+      + '[[tab: next]], [[tab: previous]], [[tab: close]], [[tab: new]], [[tab: reopen]], [[tab: reload]], [[tab: back]], [[tab: forward]], [[tab: 1]]…[[tab: 9]] the browser\'s tabs ("переключи вкладку", "закрой вкладку", "открой вкладку 3")\n'
+      + '[[app_volume: Spotify | 30]] or [[app_volume: Spotify | down]] / up: the volume inside Spotify (or Music) itself, not the Mac\'s ("сделай спотифай потише")\n'
+      + '[[keys: APP | COMBO]] press a shortcut inside an app (it comes to the front first): COMBO like cmd+t, cmd+shift+n, ctrl+tab, space, return, left, cmd+f. Use the shortcuts you know for that app, e.g. [[keys: Telegram | cmd+k]] to search chats, [[keys: Spotify | space]] to play or pause, [[keys: Spotify | cmd+right]] for the next song\n'
+      + '[[menu: APP | Menu > Item]] click a menu item of an app by its titles, in the language its menus are in (the Mac is in Russian: "Файл > Новое окно")\n'
+      + '[[chat: close]] close your chat window ("закрой чат", "пока")\n'
       + '[[hide: NAME]] hide an app, it keeps running ("скрой", "спрячь", "убери с экрана", "сверни"): never close for those\n'
       + '[[site: ADDRESS]] open a website, like youtube.com\n'
       + '[[music: ARTIST - SONG]] play a song (if they didn\'t say which, pick one that fits); [[spotify: WHAT]] search Spotify for it\n'
