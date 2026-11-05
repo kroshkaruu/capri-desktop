@@ -66,4 +66,12 @@ async function close(name, { force = false } = {}) {
   return { running: Number(left) > 0 };
 }
 
-module.exports = { list, find, close };
+// Hides it (Cmd+H): still running, out of sight. { hidden }
+async function hide(name) {
+  const app = (await list()).find((a) => a.process === name);
+  if (!app) return { hidden: false };
+  const out = await mac.osa(`tell application "System Events" to set visible of (first application process whose unix id is ${Number(app.ids[0])}) to false`);
+  return { hidden: out !== null };
+}
+
+module.exports = { list, find, close, hide };

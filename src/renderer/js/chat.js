@@ -936,6 +936,13 @@ export class Chat {
         if (res?.error) return { line: `${t.failed} ${res.error}`, face: 'aside' };
         return { line: fmt(res?.running ? t.stillOpen : t.closed, { app: app.name }), face: res?.running ? 'aside' : 'laugh' };
       }
+      case 'hide': {
+        if (!value) return null;
+        const app = await this.host.findApp(value);
+        if (!app) return { line: fmt(t.notFound, { app: value }), face: 'aside' };
+        const res = await this.host.hideApp(app.name);
+        return res?.hidden ? { line: `${app.name}: спрятала.`, face: 'smug' } : { line: `${app.name}: спрятать не вышло.`, face: 'aside' };
+      }
       case 'site': {
         this.zap();
         return value && (await this.host.openSite(value)) ? { line: fmt(t.siteOpened, { site: value }), face: 'laugh' } : null;
@@ -1062,7 +1069,8 @@ export class Chat {
     const lines = [
       'You control the user\'s Mac with tags written at the very end of your answer. One tag per action; several actions in one message mean several tags, in the order asked. The tags:\n'
       + '[[open: NAME]] open an app or a game by its real macOS name in English (Заметки = Notes, Часы = Clock, Календарь = Calendar, Настройки = System Settings, Музыка = Music, Фото = Photos, Сообщения = Messages, Карты = Maps, Калькулятор = Calculator, Почта = Mail, Напоминания = Reminders, Телеграм = Telegram, Хром = Google Chrome, Клод = Claude, the Claude desktop app, ЧатГПТ = ChatGPT, Браузер = Browser, their default browser), or a folder: Downloads, Documents, Desktop, Pictures, Finder, Trash\n'
-      + '[[close: NAME]] quit an app (same names)\n'
+      + '[[close: NAME]] quit an app (same names): only for "закрой", "выключи", "выйди из"\n'
+      + '[[hide: NAME]] hide an app, it keeps running ("скрой", "спрячь", "убери с экрана", "сверни"): never close for those\n'
       + '[[site: ADDRESS]] open a website, like youtube.com\n'
       + '[[music: ARTIST - SONG]] play a song (if they didn\'t say which, pick one that fits); [[spotify: WHAT]] search Spotify for it\n'
       + '[[media: pause]], [[media: play]], [[media: next]], [[media: previous]] for the music playing\n'

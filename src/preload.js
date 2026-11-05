@@ -62,6 +62,7 @@ contextBridge.exposeInMainWorld('host', {
   onSetupProgress: on('setup:progress'),
   openApps: () => ipcRenderer.invoke('apps:list'),
   findApp: (wanted) => ipcRenderer.invoke('apps:find', wanted),
+  hideApp: (name) => ipcRenderer.invoke('apps:hide', name),
   closeApp: (name, force) => ipcRenderer.invoke('apps:close', { name, force: Boolean(force) }),
   findLaunch: (text) => ipcRenderer.invoke('apps:findLaunch', text),
   launch: (item) => ipcRenderer.invoke('apps:launch', item),
