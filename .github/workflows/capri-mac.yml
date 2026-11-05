@@ -34,7 +34,7 @@ jobs:
 
   mac:
     needs: ears
-    runs-on: macos-latest
+    runs-on: macos-15
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
