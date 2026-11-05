@@ -45,6 +45,7 @@ contextBridge.exposeInMainWorld('host', {
   earsWant: (on) => ipcRenderer.send('ears:want', Boolean(on)),
   log: (line) => ipcRenderer.send('debug:log', String(line)),
   pcDo: (req) => ipcRenderer.invoke('pc:do', req),
+  updateInstall: () => ipcRenderer.send('update:install'),
   agentRun: (task) => ipcRenderer.invoke('agent:run', task),
   agentStop: () => ipcRenderer.send('agent:stop'),
   onAgentStep: on('agent:step'),

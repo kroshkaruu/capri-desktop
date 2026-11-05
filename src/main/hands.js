@@ -6,8 +6,67 @@
 // "включи третье видео", "нажми подписаться"… Nothing leaves your Mac but the list of what's on screen
 // and your words, sent to her AI like a chat message.
 
+const fs = require('node:fs');
+const path = require('node:path');
 const { execFile } = require('node:child_process');
 const { clipboard } = require('electron');
+
+// agent-desktop (github.com/vercel-labs/agent-desktop, Apache-2.0): reads any app's window through
+// macOS accessibility and acts on it by reference — buttons, fields, lists, web pages in browsers and
+// Electron apps. Bundled in her Resources/hands; without it she falls back to her own JXA reader.
+function adPath() {
+  const packed = path.join(process.resourcesPath || '', 'hands', 'agent-desktop');
+  if (fs.existsSync(packed)) return packed;
+  const dev = path.join(__dirname, '..', '..', 'hands', 'agent-desktop');
+  return fs.existsSync(dev) ? dev : null;
+}
+
+function ad(args, timeout = 20000) {
+  const bin = adPath();
+  if (!bin) return Promise.resolve({ ok: false, error: { code: 'MISSING' } });
+  return new Promise((resolve) => {
+    execFile(bin, args, { timeout, maxBuffer: 16 * 1024 * 1024, cwd: path.dirname(bin) }, (err, out) => {
+      try {
+        const env = JSON.parse(String(out).trim().split('\n').filter(Boolean).pop());
+        return resolve(env);
+      } catch {
+        resolve({ ok: false, error: { code: 'BAD', message: String(err?.message || out).slice(0, 300) } });
+      }
+    });
+  });
+}
+
+const AD_SKIP = /^(menubar|menu|menuitem|menubaritem)$/i;
+const AD_TEXT = /textfield|textarea|searchfield|combobox|text_field|text_area|search_field|editable/i;
+
+// agent-desktop's view of a window, in the same shape as look(): elements with a ref
+async function adLook(proc) {
+  const env = await ad(['snapshot', '--app', proc, '-i', '--compact', '--include-bounds', '--max-depth', '18', '--timeout-ms', '9000'], 30000);
+  if (!env?.ok) return { error: env?.error?.code || 'snapshot failed', ad: true };
+  const d = env.data || {};
+  const out = [];
+  const walk = (n, depth) => {
+    if (!n || out.length > 260 || depth > 40) return;
+    const role = String(n.role || '');
+    if (AD_SKIP.test(role)) return;
+    const label = [n.name, n.description, n.hint].map((x) => String(x || '').replace(/\s+/g, ' ').trim().slice(0, 90)).filter((x, j, a) => x && a.indexOf(x) === j).join(' — ');
+    const value = String(n.value || '').replace(/\s+/g, ' ').trim().slice(0, 90);
+    const b = n.bounds || n.ref_bounds;
+    if ((n.ref_id && (label || value || AD_TEXT.test(role))) || (!n.ref_id && label && depth > 0)) {
+      out.push({
+        ref: n.ref_id || null,
+        role: role.replace(/^AX/, '').replace(/(^|_)(\w)/g, (_m, _u, c) => c.toUpperCase()),
+        label, value,
+        text: AD_TEXT.test(role),
+        x: b ? Math.round(b.x + b.width / 2) : null,
+        y: b ? Math.round(b.y + b.height / 2) : null,
+      });
+    }
+    for (const c of n.children || []) walk(c, depth + 1);
+  };
+  walk(d.tree, 0);
+  return { app: d.app || proc, title: d.window?.title || d.tree?.name || '', elements: out, ad: true };
+}
 
 const MAX_STEPS = 15;
 const NEVER = /парол|password|карт[аы]\s|card number|cvv|cvc|оплат|купить|buy now|pay|перевести деньги|удалить аккаунт|delete account|очистить корзин|empty trash|стереть|erase/i;
@@ -97,6 +156,51 @@ if (how === 'press') {
 JSON.stringify({ ok: true, done: done });`, 20000);
 }
 
+// a real mouse click at a point on screen, the app brought forward first
+function clickAt(proc, x, y) {
+  return jxa(`
+ObjC.import('CoreGraphics');
+${proc ? `Application('System Events').applicationProcesses.byName(${JSON.stringify(proc)}).frontmost = true; delay(0.25);` : ''}
+const pt = $.CGPointMake(${Number(x)}, ${Number(y)});
+[$.kCGEventMouseMoved, $.kCGEventLeftMouseDown, $.kCGEventLeftMouseUp].forEach((t) => {
+  $.CGEventPost($.kCGHIDEventTap, $.CGEventCreateMouseEvent(null, t, pt, $.kCGMouseButtonLeft));
+  delay(0.05);
+});
+JSON.stringify({ ok: true });`, 10000);
+}
+
+// press / click / type through whichever reader saw the element
+async function doClick(proc, el) {
+  if (el.ref) {
+    let r = await ad(['click', el.ref]);
+    if (!r.ok) r = await ad(['--headed', 'click', el.ref]);
+    if (r.ok) return r;
+    if (el.x !== null) return clickAt(proc, el.x, el.y);
+    return { error: r.error?.code || 'click failed' };
+  }
+  if (el.path) return act(proc, el, 'press');
+  if (el.x !== null) return clickAt(proc, el.x, el.y);
+  return { error: 'nothing to click' };
+}
+
+async function doType(proc, el, text, enter) {
+  let r = { ok: false };
+  if (el.ref) {
+    r = await ad(['type', el.ref, text]);
+    if (!r.ok) r = await ad(['--headed', 'type', el.ref, text]);
+    if (!r.ok) r = await ad(['set-value', el.ref, text]);
+    if (r.ok && enter) await ad(['press', 'return', '--app', proc]);
+    if (r.ok) return r;
+    if (el.x !== null) await clickAt(proc, el.x, el.y);
+  } else if (el.path) {
+    await act(proc, el, 'click');
+  } else if (el.x !== null) {
+    await clickAt(proc, el.x, el.y);
+  }
+  await new Promise((res) => setTimeout(res, 300));
+  return paste(proc, text, enter);
+}
+
 function keyScript(proc, script) {
   return jxa(`
 const se = Application('System Events');
@@ -114,10 +218,11 @@ async function paste(proc, text, enter) {
   return r;
 }
 
-const ROLE_RU = { Button: 'кнопка', Link: 'ссылка', TextField: 'поле', TextArea: 'текст', SearchField: 'поиск', CheckBox: 'галочка', RadioButton: 'выбор', PopUpButton: 'список', ComboBox: 'поле', Tab: 'вкладка', StaticText: 'текст', Heading: 'заголовок', Cell: 'ячейка', Image: 'картинка', Switch: 'переключатель', Slider: 'ползунок' };
+const ROLE_RU = { Textfield: 'поле', Textarea: 'текст', Searchfield: 'поиск', Checkbox: 'галочка', Radiobutton: 'выбор', Popupbutton: 'список', Combobox: 'поле', Statictext: 'текст', Scrollarea: 'прокрутка', Menubutton: 'меню',
+   Button: 'кнопка', Link: 'ссылка', TextField: 'поле', TextArea: 'текст', SearchField: 'поиск', CheckBox: 'галочка', RadioButton: 'выбор', PopUpButton: 'список', ComboBox: 'поле', Tab: 'вкладка', StaticText: 'текст', Heading: 'заголовок', Cell: 'ячейка', Image: 'картинка', Switch: 'переключатель', Slider: 'ползунок' };
 
 function describe(screen) {
-  return screen.elements.map((e, i) => `${i}. ${e.role}${e.label ? ` "${e.label}"` : ''}${e.value ? ` = "${e.value}"` : ''}`).join('\n');
+  return screen.elements.map((e, i) => `${i}. ${e.role}${e.label ? ` "${e.label}"` : ''}${e.value ? ` = "${e.value}"` : ''}${e.ref === null && !e.path && e.x === null ? ' (text only)' : ''}`).join('\n');
 }
 
 const SYSTEM = 'You operate the apps on the user\'s Mac for them, one step at a time, through what is on screen. '
@@ -125,6 +230,7 @@ const SYSTEM = 'You operate the apps on the user\'s Mac for them, one step at a 
   + 'Reply with exactly ONE JSON object and nothing else:\n'
   + '{"do":"click","id":N} press element N (a button, link, video, tab, checkbox…)\n'
   + '{"do":"type","id":N,"text":"…","enter":false} click field N and type the text into it (enter:true presses Return after, e.g. to search)\n'
+  + '{"do":"scroll","id":N,"dir":"down"} scroll the list/page N (dir: up, down)\n'
   + '{"do":"key","combo":"cmd+n"} press a shortcut in the app in front (cmd+n new, cmd+f find, cmd+l address bar, ctrl+tab next tab, space, return, escape, pagedown, down, cmd+right…)\n'
   + '{"do":"open","app":"Notes"} open or bring forward an app by its macOS name in English (Notes, Safari, Telegram, Spotify, Zen…)\n'
   + '{"do":"wait"} the window is still loading\n'
@@ -143,7 +249,14 @@ async function run(task, { chat, findApp, openApp, frontApp, onStep, signal }) {
   let last = '';
   for (let i = 0; i < MAX_STEPS; i++) {
     if (signal?.aborted) return { said: 'Остановилась.' };
-    const screen = proc ? await look(proc) : { app: '', title: '', elements: [] };
+    let screen = { app: '', title: '', elements: [] };
+    if (proc) {
+      screen = adPath() ? await adLook(proc) : { error: 'no agent-desktop' };
+      if (screen.error || !screen.elements?.length) {
+        const old = await look(proc); // her own reader, when agent-desktop can't see it
+        if (old.elements?.length || !screen.elements) screen = old;
+      }
+    }
     if (screen.error && proc) return { said: `Не вижу, что в окне ${proc}: разреши Capri в «Управление устройством и доступ к данным».`, error: screen.error };
     const prompt = `Job: ${task}\nApp in front: ${screen.app || 'none'}${screen.title ? `, window "${screen.title}"` : ''}\n`
       + `Steps so far:\n${steps.length ? steps.map((s, j) => `${j + 1}. ${s}`).join('\n') : 'none'}\n`
@@ -184,21 +297,31 @@ async function run(task, { chat, findApp, openApp, frontApp, onStep, signal }) {
         if (!el) { steps.push(`there's no element ${step.id}`); break; }
         if (NEVER.test(el.label)) return { said: `«${el.label}» нажимать не буду — это уже сам.` };
         onStep?.(`нажимаю: ${name}`);
-        const r = await act(proc, el, 'press');
+        const r = await doClick(proc, el);
         steps.push(r.error ? `couldn't click ${step.id}` : `clicked ${step.id} (${el.role} "${el.label}")`);
         await new Promise((res) => setTimeout(res, 1200));
         break;
       }
       case 'type': {
         if (!el) { steps.push(`there's no element ${step.id}`); break; }
-        if (el.role === 'SecureTextField' || NEVER.test(el.label)) return { said: 'В такие поля я не печатаю — это сам.' };
+        if (/secure/i.test(el.role) || NEVER.test(el.label)) return { said: 'В такие поля я не печатаю — это сам.' };
         const text = String(step.text || '');
         onStep?.(`печатаю: «${text.slice(0, 40)}»`);
-        await act(proc, el, 'click');
-        await new Promise((res) => setTimeout(res, 300));
-        const r = await paste(proc, text, Boolean(step.enter));
+        const r = await doType(proc, el, text, Boolean(step.enter));
         steps.push(r.error ? `couldn't type in ${step.id}` : `typed "${text.slice(0, 60)}" in ${step.id}${step.enter ? ' and pressed Return' : ''}`);
         await new Promise((res) => setTimeout(res, step.enter ? 1800 : 600));
+        break;
+      }
+      case 'scroll': {
+        const dir = step.dir === 'up' ? 'up' : 'down';
+        onStep?.(`листаю ${dir === 'up' ? 'вверх' : 'вниз'}`);
+        let r = el?.ref ? await ad(['scroll', el.ref, '--direction', dir, '--amount', '5']) : { ok: false };
+        if (!r.ok) {
+          const k = await require('./system').act({ action: 'keys', app: proc, combo: dir === 'up' ? 'pageup' : 'pagedown' });
+          r = { ok: Boolean(k?.done) };
+        }
+        steps.push(r.ok ? `scrolled ${dir}` : `couldn't scroll`);
+        await new Promise((res) => setTimeout(res, 800));
         break;
       }
       case 'key': {

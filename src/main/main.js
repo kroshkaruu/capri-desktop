@@ -23,6 +23,21 @@ const launch = require('./launch');
 const files = require('./files');
 const ears = require('./ears');
 const hands = require('./hands');
+const updater = require('./updater');
+
+// a newer build on GitHub, once seen: { tag, build, url } (updater.js)
+let pendingUpdate = null;
+async function checkUpdates(said = false) {
+  try {
+    const found = await updater.check();
+    const fresh = found && found.tag !== pendingUpdate?.tag;
+    pendingUpdate = found;
+    rebuildTray();
+    if (fresh || said) sendCommand('update', { build: found?.build || null, said });
+  } catch (err) {
+    if (said) sendCommand('update', { build: null, said, error: err.message });
+  }
+}
 const system = require('./system');
 const { ASSISTANTS, assistant } = require('./assistants');
 const activeAssistant = () => assistant(config.load().assistant); // Claude Code or Codex
@@ -584,9 +599,10 @@ function rebuildTray() {
   while (rest.length && rest[0].type === 'separator') rest.shift();
   const quit = short.find((item) => item.label === t.quit);
   const shortTemplate = [
+    ...(pendingUpdate ? [{ label: `⬆ Обновить Капри (сборка ${pendingUpdate.build})`, click: () => updater.install(pendingUpdate) }, { type: 'separator' }] : []),
     ...short.filter((item) => item !== quit),
     { type: 'separator' },
-    { label: 'Расширенные настройки', submenu: rest.filter((item, i, all) => !(item.type === 'separator' && all[i - 1]?.type === 'separator')) },
+    { label: 'Расширенные настройки', submenu: [...rest.filter((item, i, all) => !(item.type === 'separator' && all[i - 1]?.type === 'separator')), { type: 'separator' }, { label: `Проверить обновления${updater.current() ? ` (сейчас ${updater.current().split('-').pop()})` : ''}`, click: () => checkUpdates(true) }] },
     { type: 'separator' },
     quit,
   ];
@@ -1099,6 +1115,7 @@ function registerIpc() {
       if (agentAbort === abort) agentAbort = null;
     }
   });
+  ipcMain.on('update:install', () => pendingUpdate && updater.install(pendingUpdate));
   ipcMain.on('agent:stop', () => agentAbort?.abort());
   ipcMain.on('ears:want', (_e, on) => { chatOpen = Boolean(on); syncEars(); });
   ipcMain.handle('pc:do', (_e, req) => Promise.resolve(system.act(req || {})).catch(() => null));
@@ -1314,6 +1331,8 @@ function main() {
   app.on('second-instance', () => sendCommand('status'));
 
   app.whenReady().then(async () => {
+    setTimeout(() => checkUpdates(), 25000); // a newer build? then every 6 hours
+    setInterval(() => checkUpdates(), 6 * 3600 * 1000);
     // this build's own defaults, once, over settings saved before them: small, folding into her chip
     if ((config.load().ruDefaults || 0) < 2) config.save({ scale: 0.45, rest: 'stow', ruDefaults: 2 });
     app.dock?.hide(); // she lives on the desktop and in the menu bar, not in the Dock

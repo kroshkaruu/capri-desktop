@@ -743,6 +743,20 @@ async function boot() {
         else if (cmd.topic === 'menu') guide.menu();
         else if (typeof guide[cmd.topic] === 'function') guide.scene(() => guide[cmd.topic]());
         break;
+      case 'update': { // a newer build of her (updater.js), or the answer to "Проверить обновления"
+        if (!cmd.build) {
+          if (cmd.said) panel.say({ kind: 'info', face: 'look', line: cmd.error ? `Не достучалась до GitHub: ${cmd.error}` : 'Я и так самая свежая.', hold: 5000 });
+          break;
+        }
+        const shown = panel.say({
+          kind: 'info', face: 'laugh', line: `Вышла новая я (сборка ${cmd.build}). Обновиться? Это минута: я закроюсь и вернусь сама.`,
+          actions: [{ id: 'go', label: 'Обновить', primary: true }, { id: 'later', label: 'Потом' }],
+          onAction: (id) => { panel.hide(); if (id === 'go') host.updateInstall(); },
+          hold: null,
+        });
+        if (!shown && chat.open) chat.interject?.(`Вышла новая я (сборка ${cmd.build}). Обновиться можно в меню ⚙ — первым пунктом.`, [], () => {});
+        break;
+      }
       case 'stow': // Ctrl+Alt+C: into her biochip, or back out (gone for a game: her window too)
         if (cmd.on) capri.stow();
         else if (pc.away) pc.comeBack();

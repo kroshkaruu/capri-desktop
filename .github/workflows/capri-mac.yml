@@ -61,7 +61,16 @@ jobs:
           cp prev/Capri.app/Contents/Resources/app.asar.unpacked/src/main/mac/capri-helper src/main/mac/capri-helper
           chmod +x src/main/mac/capri-helper
           ls -la src/main/mac | tee logs/build.log
-          node -e "const f='package.json',p=require('./'+f);delete p.os;require('fs').writeFileSync(f,JSON.stringify(p,null,2))"
+          # her hands: agent-desktop (vercel-labs, Apache-2.0), the Apple Silicon build
+          mkdir -p hands
+          gh release download -R vercel-labs/agent-desktop -p '*-aarch64-apple-darwin.tar.gz' -D hands/dl
+          tar -xzf hands/dl/*.tar.gz -C hands/dl
+          find hands/dl -type f \( -name agent-desktop -o -name agent-desktop-macos-helper \) -exec cp {} hands/ \;
+          rm -rf hands/dl && chmod +x hands/* && ls -la hands | tee -a logs/build.log
+          tag="capri-mac-$(date +%Y%m%d)-${{ github.run_number }}"
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+          node -e "const f='package.json',p=require('./'+f);delete p.os;p.capriBuild='$tag';require('fs').writeFileSync(f,JSON.stringify(p,null,2))"
+          chmod +x mac/install.sh
           npm ci 2>&1 | tail -3 | tee -a logs/build.log
           npx electron-builder --mac dir --arm64 --publish never 2>&1 | tail -20 | tee -a logs/build.log
           ls dist | tee -a logs/build.log
@@ -73,8 +82,7 @@ jobs:
           mkdir pack && cp -R "$app" pack/Capri.app && cp "Как установить.txt" pack/
           (cd pack && zip -qry ../Capri-Mac-RU.zip Capri.app "Как установить.txt")
           ls -la Capri-Mac-RU.zip | tee -a logs/build.log
-          tag="capri-mac-$(date +%Y%m%d)-${{ github.run_number }}"
-          gh release create "$tag" Capri-Mac-RU.zip --target capri-mac --latest --title "Капри для Mac по-русски — сборка ${{ github.run_number }}" --notes-file "Как установить.txt"
+          gh release create "$TAG" Capri-Mac-RU.zip --target capri-mac --latest --title "Капри для Mac по-русски — сборка ${{ github.run_number }}" --notes-file "Как установить.txt"
       - name: Share the logs
         if: always()
         run: |
