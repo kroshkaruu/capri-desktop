@@ -110,6 +110,75 @@ async function vpn(what = 'status', wanted = '') {
   return { name: pick.name, on: /^connected/i.test(now), status: now };
 }
 
+// A VPN app that keeps its tunnel to itself (Red Shield VPN…): opened, and its connect (or disconnect)
+// button pressed through Accessibility, by the button's name. { app, pressed } or { app, need }.
+const VPN_APPS = ['Red Shield VPN', 'Outline', 'Hiddify', 'AmneziaVPN', 'Amnezia', 'Proton VPN', 'NordVPN', 'Surfshark', 'ExpressVPN', 'Windscribe', 'Happ', 'V2Box', 'FoXray', 'Streisand'];
+
+async function vpnApp(what = 'on') {
+  let name = null;
+  for (const candidate of VPN_APPS) {
+    if (fs.existsSync(`/Applications/${candidate}.app`)) { name = candidate; break; }
+  }
+  if (!name) return null;
+  await run('open', ['-a', name]);
+  await new Promise((r) => setTimeout(r, 2500));
+  const words = what === 'off'
+    ? ['disconnect', 'отключ', 'stop', 'выключ', 'стоп', 'turn off']
+    : ['connect', 'подключ', 'start', 'включ', 'старт', 'turn on'];
+  const avoid = what === 'off' ? [] : ['disconnect', 'отключ', 'выключ'];
+  const list = (a) => `{${a.map((w) => `"${w}"`).join(', ')}}`;
+  // every button and checkbox in its windows (and its menu-bar window), by name, title or description
+  const script = `
+set wanted to ${list(words)}
+set avoid to ${list(avoid)}
+tell application "System Events"
+  if not (exists process "${name}") then return "noprocess"
+  tell process "${name}"
+    set found to {}
+    repeat with w in windows
+      try
+        set found to found & (every UI element of entire contents of w whose role is "AXButton" or role is "AXCheckBox" or role is "AXSwitch")
+      end try
+    end repeat
+    repeat with b in found
+      set label to ""
+      try
+        set label to label & " " & (name of b as text)
+      end try
+      try
+        set label to label & " " & (title of b as text)
+      end try
+      try
+        set label to label & " " & (description of b as text)
+      end try
+      ignoring case
+        set bad to false
+        repeat with x in avoid
+          if label contains x then set bad to true
+        end repeat
+        if not bad then
+          repeat with x in wanted
+            if label contains x then
+              click b
+              return "pressed:" & label
+            end if
+          end repeat
+        end if
+      end ignoring
+    end repeat
+    if (count of found) is 1 then
+      click item 1 of found
+      return "pressed: переключатель"
+    end if
+    return "nobutton:" & (count of found)
+  end tell
+end tell`;
+  const out = await osa(script, 10000);
+  if (out === null) return { app: name, need: 'accessibility' };
+  if (out.startsWith('pressed:')) return { app: name, pressed: out.slice(8).trim().slice(0, 60) || 'кнопку' };
+  return { app: name, note: out };
+}
+
 function act(req = {}) {
   switch (req.action) {
     case 'settings': return settings(String(req.page));
@@ -120,6 +189,7 @@ function act(req = {}) {
     case 'theme': return theme(Boolean(req.dark));
     case 'power': return power(String(req.what), Number(req.seconds) || 0);
     case 'vpn': return vpn(String(req.what || 'status'), String(req.name || ''));
+    case 'vpnApp': return vpnApp(String(req.what || 'on'));
     default: return null;
   }
 }

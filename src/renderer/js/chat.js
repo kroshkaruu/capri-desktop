@@ -340,7 +340,8 @@ export class Chat {
     if (!this.agent) {
       const mood = this.bond?.moodLine().replace(/^Right now: /, '');
       const last = messages.at(-1);
-      messages[messages.length - 1] = { ...last, content: `${last.content}\n\n(Note for you, never repeat it: ${[mood, this.languageNote()].filter(Boolean).join(' ')})` };
+      const doIt = 'If this message asks you to do anything on their Mac (open, close, music, volume, windows, VPN, search, timer…), you MUST end your answer with the tags that do it, like [[close: Spotify]] or [[tidy]]: without a tag nothing happens, so never say you did it without one.';
+      messages[messages.length - 1] = { ...last, content: `${last.content}\n\n(Note for you, never repeat it: ${[doIt, mood, this.languageNote()].filter(Boolean).join(' ')})` };
     }
     // nothing yet after a few seconds: Ollama is still loading the model (the first answer after a start),
     // or Claude Code is at work
@@ -366,7 +367,8 @@ export class Chat {
     }
     const answer = clean(res.text) || '…';
     this.warm = true;
-    this.remember({ role: 'assistant', content: answer });
+    const tagsWritten = (String(res.text).match(/\[\[[^\]]*\]\]/g) || []).join(' ');
+    this.remember({ role: 'assistant', content: tagsWritten ? `${answer} ${tagsWritten}` : answer });
     this.panel.stream(answer, { done: true });
     this.panel.setFace(mood(answer));
     this.panel.setChatBusy(false);
@@ -801,7 +803,9 @@ export class Chat {
         if (name.length >= 3 && said.includes(name) && (!best || name.length > best.length)) best = { app, length: name.length };
       }
     }
-    return best?.app.name || null;
+    if (best) return best.app.name;
+    const rest = text.replace(/^.*?(?:закрой|закрыть|закроешь|выключи|выйди из|убей|заверши|close|quit)\s+(?:мне\s+)?/i, '').replace(/[.!?]+$/, '').trim();
+    return rest && rest !== text.trim() && rest.split(/\s+/).length <= 3 ? rest : null;
   }
 
   // She was asked to close an app: a button with its name, and nothing happens until you click it.
@@ -1014,7 +1018,15 @@ export class Chat {
         const r = await pc({ action: 'vpn', what, name: m[2] || '' });
         this.host.log?.(`vpn ${what}: ${JSON.stringify(r)}`);
         if (!r) return { line: 'Не смогла дотянуться до VPN.', face: 'aside' };
-        if (r.none) return { line: 'В системе не вижу ни одного VPN-подключения: твой VPN, похоже, не даёт управлять собой снаружи. Могу только открыть его приложение.', face: 'aside' };
+        if (r.none) {
+          // Red Shield and the like don't put their VPN in the system: their app, and its button pressed
+          if (what === 'status') return { line: 'Твой VPN не показывает системе, включён ли он. Загляни в его окно.', face: 'aside' };
+          const res = await pc({ action: 'vpnApp', what });
+          this.host.log?.(`vpnApp ${what}: ${JSON.stringify(res)}`);
+          if (res?.pressed) return { line: `${res.app}: нажала «${res.pressed}».`, face: 'smug' };
+          if (res?.app) return { line: `Открыла ${res.app}. Кнопку внутри мне нажать не дали${res.need ? ': разреши Capri в Настройки → Конфиденциальность и безопасность → Универсальный доступ' : ''}, нажми сам.`, face: 'aside' };
+          return { line: 'Не нашла VPN-приложение.', face: 'aside' };
+        }
         if (what === 'status') return { line: `${r.name}: ${r.on ? 'включён' : 'выключен'}.`, face: 'look' };
         const ok = what === 'on' ? r.on : !r.on;
         return { line: ok ? `${r.name}: ${what === 'on' ? 'включила' : 'выключила'}.` : `${r.name}: попросила ${what === 'on' ? 'включиться' : 'выключиться'}, сейчас статус «${r.status}».`, face: ok ? 'smug' : 'aside' };
