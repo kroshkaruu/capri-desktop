@@ -180,7 +180,7 @@ async function boot() {
   }, WATCH_MS);
   window.addEventListener('contextmenu', (e) => {
     e.preventDefault();
-    if (chip.visible && chip.contains(e.clientX, e.clientY, 0)) host.openMenu();
+    // no menu on a right click: it's the ⚙ in her chat, or her icon in the menu bar
   });
   window.addEventListener('click', (e) => {
     if (chip.visible && chip.contains(e.clientX, e.clientY, 0)) comeOut();
@@ -219,7 +219,8 @@ async function boot() {
   };
   panel.onChar = (kind) => voice.play('blip', { mood: kind });
   panel.onTalk = (talking) => talking && capri.perform('talk');
-  capri.onMenu = () => host.openMenu();
+  capri.onMenu = () => {}; // a right click on her opens nothing
+  panel.onSettings = () => host.openMenu();
 
   // Her guide (guide.js): her welcome on first launch, and "How does it work?" in her menu,
   // where she takes you to things and points at them.

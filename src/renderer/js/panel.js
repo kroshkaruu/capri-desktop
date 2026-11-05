@@ -76,6 +76,8 @@ export class Panel {
       if (e.key === 'Escape') this.hide();
     });
     this.chatClose.addEventListener('click', () => this.hide());
+    this.onSettings = null; // her menu, from the ⚙ in her chat (app.js)
+    panel.querySelector('.panel__settings')?.addEventListener('click', () => this.onSettings?.());
 
     this.el.addEventListener('click', () => {
       if (this.current?.chat) this.chatInput.focus(); // a chat stays until you close it
