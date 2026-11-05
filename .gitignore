@@ -1,0 +1,12 @@
+node_modules/
+dist/
+out/
+*.log
+.DS_Store
+Thumbs.db
+
+# local debug captures
+captures/
+
+# the macOS helper, built from its Swift source (scripts/build-mac-helper.js)
+src/main/mac/capri-helper

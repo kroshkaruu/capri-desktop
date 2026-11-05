@@ -1,0 +1,105 @@
+{
+  "name": "capri-macos",
+  "productName": "Capri",
+  "version": "1.0.0-ru",
+  "description": "Capri, the Project Capricorn construct, living on your Mac and narrating what Claude Code is doing. An unofficial macOS port of mochiiwuff/capri-desktop.",
+  "author": "CyberMoonie",
+  "contributors": [
+    {
+      "name": "mochiiwuff",
+      "url": "https://github.com/mochiiwuff",
+      "role": "original Capri (Windows)"
+    }
+  ],
+  "repository": "github:CyberMoonie/capri-macos",
+  "main": "src/main/main.js",
+  "private": true,
+  "os": [
+    "darwin"
+  ],
+  "scripts": {
+    "prestart": "node scripts/build-mac-helper.js",
+    "start": "electron .",
+    "predev": "node scripts/build-mac-helper.js",
+    "dev": "electron . --dev",
+    "demo": "node scripts/demo.js",
+    "hooks:install": "node scripts/install-hooks.js",
+    "hooks:uninstall": "node scripts/install-hooks.js --uninstall",
+    "hooks:codex:install": "node scripts/install-codex-hooks.js",
+    "hooks:codex:uninstall": "node scripts/install-codex-hooks.js --uninstall",
+    "hooks:agy:install": "node scripts/install-hooks-agy.js",
+    "hooks:agy:uninstall": "node scripts/install-hooks-agy.js --uninstall",
+    "check:llm": "node scripts/check-llm.js",
+    "test": "node --test tests/",
+    "test:hooks": "node --test tests/hooks.test.js",
+    "dist": "node scripts/build-mac-helper.js --universal && electron-builder --mac"
+  },
+  "keywords": [
+    "claude-code",
+    "desktop-pet",
+    "electron",
+    "macos",
+    "cyberpunk",
+    "edgerunners"
+  ],
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "electron": "^44.9.3",
+    "electron-builder": "^26.18.0"
+  },
+  "dependencies": {
+    "@fontsource/chakra-petch": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0"
+  },
+  "build": {
+    "appId": "capri.desktop",
+    "productName": "Capri",
+    "files": [
+      "src/**",
+      "!src/main/mac/*.swift",
+      "assets/**",
+      "hooks/**",
+      "scripts/**",
+      "package.json",
+      "LICENSE",
+      "!ears/**"
+    ],
+    "asarUnpack": [
+      "hooks/**",
+      "src/main/mac/capri-helper"
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "assets/icons/capri.icns",
+      "category": "public.app-category.entertainment",
+      "identity": "-",
+      "extendInfo": {
+        "LSUIElement": true,
+        "NSMicrophoneUsageDescription": "Капри слушает тебя, чтобы понимать голосовые команды и вопросы.",
+        "NSAppleEventsUsageDescription": "Капри управляет музыкой, громкостью и программами, когда ты просишь."
+      },
+      "artifactName": "Capri-RU-${arch}.${ext}",
+      "minimumSystemVersion": "12.0",
+      "hardenedRuntime": false,
+      "extraResources": [
+        {
+          "from": "ears/out",
+          "to": "ears"
+        }
+      ]
+    },
+    "dmg": {
+      "title": "Capri ${version}"
+    }
+  }
+}
