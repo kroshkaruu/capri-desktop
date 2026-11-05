@@ -129,7 +129,7 @@ export class Panel {
     this.el.dataset.kind = msg.kind;
     this.setFace(msg.face || KIND_FACE[msg.kind] || 'grin');
     this.tag.textContent = msg.tag || '';
-    this.state.textContent = msg.badge || this.labels.state[msg.kind] || '';
+    this.state.textContent = msg.badge === null ? '' : msg.badge || this.labels.state[msg.kind] || '';
     this.quote.textContent = msg.quote || '';
     this.quote.hidden = !msg.quote;
     this.setProgress(msg.progress);

@@ -258,8 +258,8 @@ export class Chat {
     const shown = this.panel.say({
       kind: 'chat',
       face: moody ? MOOD_FACE[feeling] : 'look',
-      badge: t.badge,
-      tag: shortModel,
+      badge: null, // no «ИИ · ЭФИР»
+      tag: '',     // no model name by hers
       line: tiny ? fmt(t.tiny, { model: shortModel }) : hello,
       actions: tiny ? [{ id: 'better', label: t.better, primary: true }] : [],
       onAction: () => {
@@ -271,7 +271,7 @@ export class Chat {
         send: t.send,
         close: t.close,
         noteTag: t.noteTag,
-        note: status.local ? t.note : t.noteCloud,
+        note: null, // no «Ответы генерирует… ИИ» under it
       },
       onSend: (text) => this.send(text),
       onLeave: () => this.close(),
