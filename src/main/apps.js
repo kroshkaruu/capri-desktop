@@ -14,13 +14,21 @@ const KEEP = new Set(['finder', 'capri', 'electron', 'claude', 'codex', 'ollama'
 async function list() {
   const rows = await mac.helperJson(['apps']);
   const apps = new Map();
-  for (const { pid, name } of rows) {
+  for (const { pid, name, bundle } of rows) {
     if (!name || pid === process.pid || KEEP.has(name.toLowerCase())) continue;
-    const app = apps.get(name) || { name, process: name, label: name, ids: [] };
+    const app = apps.get(name) || { name, process: name, label: name, bundle, ids: [] };
     app.ids.push(pid);
     apps.set(name, app);
   }
   return [...apps.values()];
+}
+
+// an app's bundle id (com.apple.Notes), from its Info.plist
+function bundleOf(appPath) {
+  return new Promise((resolve) => {
+    require('node:child_process').execFile('plutil', ['-extract', 'CFBundleIdentifier', 'raw', '-o', '-', `${appPath}/Contents/Info.plist`], { timeout: 5000 },
+      (err, out) => resolve(err ? null : String(out).trim() || null));
+  });
 }
 
 const simple = (text) => String(text || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
@@ -42,7 +50,11 @@ async function find(wanted) {
     return 0;
   };
   const best = apps.map((app) => [score(app), app]).filter(([s]) => s > 0).sort((a, b) => b[0] - a[0])[0];
-  return best ? best[1] : null;
+  if (best) return best[1];
+  // "System Settings" open as «Системные настройки» on a Mac in Russian: the installed app it names, by its bundle id
+  const item = await require('./launch').find(wanted).catch(() => null);
+  const id = item?.kind === 'app' ? await bundleOf(item.id) : null;
+  return (id && apps.find((app) => app.bundle === id)) || null;
 }
 
 // Quits it like Cmd+Q would; `force` ends it outright (unsaved work is lost).
