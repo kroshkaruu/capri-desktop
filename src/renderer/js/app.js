@@ -122,8 +122,18 @@ async function boot() {
   let wakeTimer = 0;
   const comeOut = () => {
     if (capri.stowed) host.setConfig({ visible: true }); // the tray and Ctrl+Alt+C follow
+    lastActive = performance.now();
     capri.unstow();
+    setTimeout(() => chat.start(), 900); // out of her chip and straight into her chat
   };
+  // Resting folded into her chip (her menu › Когда она отдыхает › Сворачиваться в чип): two minutes
+  // with nothing going on and her chat closed, and she goes into it; a click on it brings her back.
+  let lastActive = performance.now();
+  setInterval(() => {
+    if (capri.restOn !== 'stow' || capri.stowed) return;
+    if (chat.open || panel.visible || capri.busy || capri.dragging) { lastActive = performance.now(); return; }
+    if (performance.now() - lastActive > 120000) capri.stow();
+  }, 15000);
   const hoverChip = () => {
     chip.pointer = chip.visible && mouse && chip.contains(mouse.x, mouse.y) ? mouse : null;
     const near = mask.visible && mouse && mask.contains(mouse.x, mouse.y, 30);
@@ -266,12 +276,13 @@ async function boot() {
   pc.wantsOut = () => wantsOut;
 
   // Clicking her: what's going on, or she offers to talk. Sulking, she turns her back on you.
+  // Clicking her: her chat, right away
   capri.onClick = () => {
+    bond.add('click', 1);
+    lastActive = performance.now();
+    if (chat.open) return panel.chatInput?.focus();
     if (panel.visible) panel.hide();
-    else if (!jealousy.onClick()) {
-      brain.status();
-      bond.add('click', 1);
-    }
+    return chat.start();
   };
 
   // Thrown around (capri.js throwHer): she says how it was. The first time she's shaken (or she

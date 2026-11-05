@@ -543,7 +543,7 @@ function rebuildTray() {
     },
     {
       label: t.rest,
-      submenu: [['corner', t.restCorner], ['dock', t.restDock]].map(([rest, label]) => ({
+      submenu: [['stow', 'Сворачиваться в чип'], ['corner', t.restCorner], ['dock', t.restDock]].map(([rest, label]) => ({
         label, type: 'radio', checked: cfg.rest === rest, click: () => updateConfig({ rest }),
       })),
     },
@@ -576,9 +576,22 @@ function rebuildTray() {
     { type: 'separator' },
     { label: t.quit, click: () => app.quit() },
   ];
-  const menu = Menu.buildFromTemplate(template);
+  // the short menu: make her yours, hide her, her AI; everything else under "Расширенные настройки"
+  const keep = new Set([t.custom, cfg.visible ? t.hide : t.show, t.chatModel, t.quit]);
+  const short = template.filter((item) => keep.has(item.label));
+  const rest = template.filter((item) => !keep.has(item.label));
+  while (rest.length && rest[0].type === 'separator') rest.shift();
+  const quit = short.find((item) => item.label === t.quit);
+  const shortTemplate = [
+    ...short.filter((item) => item !== quit),
+    { type: 'separator' },
+    { label: 'Расширенные настройки', submenu: rest.filter((item, i, all) => !(item.type === 'separator' && all[i - 1]?.type === 'separator')) },
+    { type: 'separator' },
+    quit,
+  ];
+  const menu = Menu.buildFromTemplate(shortTemplate);
   trayMenu = menu;
-  styledMenu = serializeMenu(template);
+  styledMenu = serializeMenu(shortTemplate);
   if (styledOpen) overlay?.webContents.send('menu:show', { items: styledMenu.items, refresh: true });
 }
 
@@ -1268,6 +1281,8 @@ function main() {
   app.on('second-instance', () => sendCommand('status'));
 
   app.whenReady().then(async () => {
+    // this build's own defaults, once, over settings saved before them: small, folding into her chip
+    if ((config.load().ruDefaults || 0) < 2) config.save({ scale: 0.45, rest: 'stow', ruDefaults: 2 });
     app.dock?.hide(); // she lives on the desktop and in the menu bar, not in the Dock
     await offerApplications();
     if (!['codex', 'claude'].includes(config.load().assistant)) config.save({ assistant: activeAssistant().id });

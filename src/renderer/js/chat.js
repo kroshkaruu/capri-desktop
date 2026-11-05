@@ -168,6 +168,10 @@ const PROTOCOL_RUN = /^(?:капри,?\s+)?(?:(?:запусти|выполни|�
 const NUMBER_WORDS = { один: '1', одна: '1', первый: '1', два: '2', второй: '2', три: '3', третий: '3', четыре: '4', четвёртый: '4', четвертый: '4', пять: '5', пятый: '5', шесть: '6', семь: '7', восемь: '8', девять: '9', десять: '10' };
 const protocolName = (word) => { const w = String(word).toLowerCase().replace(/[.,!?]+$/, ''); return NUMBER_WORDS[w] || w; };
 
+// "выключи голосовой чат", "выключи микрофон", "не слушай меня": her ears off (and back on)
+const VOICE_OFF = /^(?:капри,?\s+)?(?:выключи|отключи|убери|останови)\s+(?:голосовой\s+(?:чат|режим|ввод)|голос|микрофон|слух|прослушку)[.!]*$|^(?:капри,?\s+)?(?:не\s+слушай(?:\s+меня)?|хватит\s+слушать)[.!]*$/iu;
+const VOICE_ON = /^(?:капри,?\s+)?(?:включи|верни)\s+(?:голосовой\s+(?:чат|режим|ввод)|голос|микрофон|слух)[.!]*$/iu;
+
 // "закрой чат", "пока, закрой диалог", "убери окно": her chat closes
 const CLOSE_CHAT = /^(?:капри,?\s+)?(?:(?:ладно|всё|все|пока|спасибо),?\s+)?(?:закрой|закрыть|убери|скрой|сверни)\s+(?:этот\s+|наш\s+)?(?:чат|диалог|окно\s+(?:чата|диалога)|переписку)[.!]*$/iu;
 
@@ -306,6 +310,13 @@ export class Chat {
 
   async send(text) {
     if (this.turn || !this.open) return;
+    const voiceOff = VOICE_OFF.test(String(text).trim());
+    if (voiceOff || VOICE_ON.test(String(text).trim())) {
+      this.host.setConfig({ ears: !voiceOff });
+      this.panel.chatTurn({ quote: text, face: 'aside' });
+      this.panel.stream(voiceOff ? 'Голос выключила, больше не слушаю. Включить снова: напиши «включи голос» или в меню › Расширенные настройки.' : 'Голос включила, слушаю.', { done: true });
+      return;
+    }
     if (CLOSE_CHAT.test(String(text).trim())) {
       this.panel.hide(); // her chat goes, and her ears with it (close)
       this.close();
