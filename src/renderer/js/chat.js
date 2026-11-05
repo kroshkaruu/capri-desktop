@@ -162,9 +162,9 @@ function duration(said) {
 // 1 h 30, 10 min, 45 s
 function span(ms) {
   const s = Math.round(ms / 1000);
-  if (s < 60) return `${s} s`;
+  if (s < 60) return `${s} с`;
   const m = Math.round(s / 60);
-  return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${String(m % 60).padStart(2, '0')}` : ''}`;
+  return m < 60 ? `${m} мин` : `${Math.floor(m / 60)} ч${m % 60 ? ` ${m % 60} мин` : ''}`;
 }
 
 // what's left, in her ticker: 9:59, 1:02:03
@@ -382,8 +382,14 @@ export class Chat {
     this.onMessage?.();
     // what you asked for plainly happens right away (the music, the volume, an app you named): her
     // line about it comes under her answer (Claude Code, answering her chat, does things its own way)
-    const asked = this.agent ? null : this.asked(text);
+    let asked = this.agent ? null : this.asked(text);
     if (asked?.kind === 'look') return this.sendLook(text, id);
+    // on a Mac her tags do it (several actions in one message too): what was read off your message only if she wrote none
+    this.fallback = null;
+    if (trusted() && asked && !['remind', 'name', 'memo'].includes(asked.kind)) {
+      this.fallback = asked;
+      asked = null;
+    }
     const early = asked && asked.kind !== 'close' ? this.doNow(asked) : null;
     this.bond?.heard(text); // "sorry": she lets it go
     await Promise.race([this.appsReady, new Promise((r) => setTimeout(r, 1500))]);
@@ -814,6 +820,7 @@ export class Chat {
   // her tag asks for, if your message (text) asked for that kind of thing.
   async after(raw, answer, asked, early, text) {
     const { t } = this;
+    if (trusted()) return this.afterMac(raw, answer, asked, early, text);
     const done = early && (await early.catch((err) => { this.host.log?.(`doNow failed: ${err?.message || err}`); return null; }));
     this.host.log?.(`heard=${JSON.stringify(text)} asked=${JSON.stringify(asked)} done=${JSON.stringify(done && { line: done.line, offer: Boolean(done.offer) })} raw=${JSON.stringify(String(raw).slice(-160))}`);
     if (done?.reminder) {
@@ -1005,6 +1012,151 @@ export class Chat {
     this.listApps();
   }
 
+
+  // A Mac: every tag in her answer, in order ("закрой заметки открой часы" is two), done right away.
+  async afterMac(raw, answer, asked, early, text) {
+    const t = this.t;
+    const lines = [];
+    let face = null;
+    let confirm = null;
+    let files = null;
+    const done = early && (await early.catch((err) => { this.host.log?.(`early failed: ${err?.message || err}`); return null; }));
+    if (done?.line) { lines.push(done.line); face = done.face; }
+    const tags = [...String(raw).matchAll(/\[\[\s*([a-z_]+)\s*(?::\s*([^\]]*))?\]\]/gi)].map((m) => [m[1].toLowerCase(), (m[2] || '').trim()]);
+    this.host.log?.(`heard=${JSON.stringify(text)} tags=${JSON.stringify(tags)} fallback=${JSON.stringify(this.fallback)}`);
+    const add = (r) => {
+      if (!r) return;
+      if (r.line) lines.push(r.line);
+      if (r.face) face = r.face;
+      if (r.confirm) confirm = r;
+      if (r.files) files = r.files;
+    };
+    for (const [kind, value] of tags.slice(0, 8)) {
+      try {
+        add(await this.runTag(kind, value));
+      } catch (err) {
+        this.host.log?.(`tag ${kind}:${value} failed: ${err?.message || err}`);
+        lines.push(`${t.failed} ${err?.message || err}`);
+      }
+    }
+    // she wrote no tag, though your message plainly asked for something: what was read off it
+    if (!tags.length && this.fallback) {
+      const f = this.fallback;
+      this.fallback = null;
+      add(f.kind === 'close' ? await this.runTag('close', f.name) : await this.doNow(f).catch(() => null));
+    }
+    if (lines.length) this.addLine(answer, lines.join('\n'), face);
+    if (confirm) {
+      const tp = this.t.pc;
+      this.panel.setActions([{ id: 'yes', label: tp.yes[confirm.confirm.power], primary: true }, { id: 'no', label: tp.no }], (id) => {
+        if (id === 'yes') return this.powerNow(confirm.confirm, answer);
+        this.panel.setActions([]);
+        return this.addLine(answer, tp.kept, 'look');
+      });
+    } else if (files?.length) {
+      const [first] = files;
+      this.panel.setActions([{ id: 'open', label: fmt(t.openIt, { app: first.name }), primary: true }, { id: 'folder', label: t.showFolder }],
+        (id) => this.host.openFile(first.path, id === 'folder'));
+    }
+    this.listApps();
+  }
+
+  // One of her tags, done: her line about it ({ line, face, ... }) or null.
+  async runTag(kind, value) {
+    const t = this.t;
+    const pc = (what, more = {}) => this.pcNow({ kind: 'pc', what, ...more });
+    const v = value.toLowerCase();
+    switch (kind) {
+      case 'open': {
+        if (!value) return null;
+        const item = await this.host.findLaunch(value);
+        if (item && !item.risky) return this.openNow(item);
+        const site = namedSite(value);
+        if (site) { this.zap(); return (await this.host.openSite(site.url)) ? { line: fmt(t.siteOpened, { site: site.name }), face: 'laugh' } : null; }
+        return { line: fmt(t.notInstalled, { app: value }), face: 'aside' };
+      }
+      case 'close': {
+        if (!value) return null;
+        const app = await this.host.findApp(value);
+        if (!app) return { line: fmt(t.notFound, { app: value }), face: 'aside' };
+        this.zap();
+        const res = await this.host.closeApp(app.name, false);
+        if (res.error) return { line: `${t.failed} ${res.error}`, face: 'aside' };
+        return { line: fmt(res.running ? t.stillOpen : t.closed, { app: app.name }), face: res.running ? 'aside' : 'laugh' };
+      }
+      case 'site': {
+        this.zap();
+        return (await this.host.openSite(value)) ? { line: fmt(t.siteOpened, { site: value }), face: 'laugh' } : null;
+      }
+      case 'music': return value ? this.youtube(value) : null;
+      case 'spotify': {
+        this.zap();
+        return value && (await this.host.music(value)) ? { line: fmt(t.music, { song: value }), face: 'laugh' } : null;
+      }
+      case 'media': {
+        if (!MEDIA_ACTIONS.has(v)) return null;
+        this.capri.pulse();
+        return (await this.host.media(v)) ? { line: t.media[v], face: 'smug' } : null;
+      }
+      case 'volume': {
+        if (/mute|выкл|off/.test(v) && !/un|вкл|on/.test(v)) return pc('volume', { mute: true });
+        if (/unmute|вкл|on/.test(v)) return pc('volume', { mute: false });
+        const level = Number.parseInt(v, 10);
+        return Number.isFinite(level) ? pc('volume', { level: Math.max(0, Math.min(100, level)) }) : null;
+      }
+      case 'timer': {
+        const seconds = /^\d+(?:[.,]\d+)?$/.test(v) ? Number(v.replace(',', '.')) : duration(value) / 1000;
+        return seconds >= 1 ? pc('timer', { ms: Math.round(seconds * 1000) }) : null;
+      }
+      case 'settings': return t.pc.pages[v] ? pc('settings', { page: v }) : null;
+      case 'theme': return pc('theme', { dark: !/light|светл/.test(v) });
+      case 'snip': return pc('snip');
+      case 'tidy': return pc('tidy');
+      case 'untidy': return pc('tidy', { back: true });
+      case 'info': return ['battery', 'disk', 'ram', 'ip'].includes(v) ? pc('info', { info: v }) : null;
+      case 'power': {
+        if (!['lock', 'sleep', 'shutdown', 'restart', 'cancel'].includes(v)) return null;
+        return pc('power', { power: v, seconds: 30 });
+      }
+      case 'search': {
+        this.zap();
+        return value && (await this.host.webSearch(value)) ? { line: fmt(t.web, { query: value }), face: 'smug' } : null;
+      }
+      case 'files': return value ? this.doNow({ kind: 'files', query: value, exts: fileTypes(value), then: null }) : null;
+      case 'screenshot': return this.doNow({ kind: 'shot' });
+      default: return null;
+    }
+  }
+
+  // What she can do on a Mac, by her tags.
+  powersMac() {
+    const lines = [
+      'You control the user\'s Mac with tags written at the very end of your answer. One tag per action; several actions in one message mean several tags, in the order asked. The tags:\n'
+      + '[[open: NAME]] open an app or a game by its real macOS name in English (Заметки = Notes, Часы = Clock, Календарь = Calendar, Настройки = System Settings, Музыка = Music, Фото = Photos, Сообщения = Messages, Карты = Maps, Калькулятор = Calculator, Почта = Mail, Напоминания = Reminders, Телеграм = Telegram, Хром = Google Chrome), or a folder: Downloads, Documents, Desktop, Pictures, Finder, Trash\n'
+      + '[[close: NAME]] quit an app (same names)\n'
+      + '[[site: ADDRESS]] open a website, like youtube.com\n'
+      + '[[music: ARTIST - SONG]] play a song on YouTube (if they didn\'t say which, pick one that fits); [[spotify: WHAT]] search Spotify for it\n'
+      + '[[media: pause]], [[media: play]], [[media: next]], [[media: previous]] for the music playing\n'
+      + '[[volume: 0 to 100]], [[volume: mute]], [[volume: unmute]]\n'
+      + '[[timer: SECONDS]] a timer (10 minutes is [[timer: 600]])\n'
+      + '[[settings: PAGE]] PAGE: bluetooth, sound, wifi, network, update, display, notifications, mouse, battery, background, storage\n'
+      + '[[theme: dark]] or [[theme: light]]; [[snip]] a screenshot of an area; [[screenshot]] of the whole screen; [[tidy]] hide all windows, [[untidy]] bring them back\n'
+      + '[[info: battery]], [[info: disk]], [[info: ram]], [[info: ip]] (the numbers show under your answer: don\'t make them up)\n'
+      + '[[power: lock]], [[power: sleep]], [[power: shutdown]], [[power: restart]], [[power: cancel]]\n'
+      + '[[search: QUERY]] search Google; [[files: WORDS]] find the user\'s files by name (results show under your answer)\n'
+      + 'Example. User: "закрой заметки открой часы". You: "Заметки — прочь, часы — на экран. [[close: Notes]] [[open: Clock]]"\n'
+      + 'The tags act right away: never mention buttons and never ask them to click or confirm (only shutting down or restarting shows a button by itself). Say in a few words what you\'re doing, as if it\'s happening. Write tags only when they ask you to do something; a plain question or chat gets no tag.',
+    ];
+    if (this.apps.length) lines.push(`Apps open on their Mac right now: ${this.apps.map(({ name }) => name).join(', ')}.`);
+    if (this.reminders) {
+      lines.push('Reminders ("напомни мне в 18:00 позвонить маме") are set by your system from their message: just confirm in a few words, and if they didn\'t say when, ask when. Timers use [[timer: SECONDS]].');
+      const soon = this.reminders.upcoming.slice(0, 6);
+      if (soon.length) lines.push(`Reminders and timers you're keeping for them: ${soon.map((r) => `${clock(r.at, this.brain.lang)}${r.text ? ` (${r.text})` : ''}`).join('; ')}.`);
+    }
+    lines.push('You can\'t see their screen or read their files\' contents: if asked for something no tag does, say plainly that you can\'t, in character.');
+    return lines;
+  }
+
   // What she can do on the PC when you ask (Windows), and nothing else.
   powers() {
     const lines = [
@@ -1104,7 +1256,7 @@ export class Chat {
         : []),
       ...(this.agent
         ? ['Under the hood you are Claude Code, working in the user\'s project: really do what they ask with your tools, as carefully as ever. Only your final answer is in character: it shows in a small speech bubble, so sum up what you did in those few sentences.']
-        : this.powers()),
+        : trusted() ? this.powersMac() : this.powers()),
       ...(watching ? [`If the user asks what ${assistant} is doing, here is all you know (never make anything up): ${this.brain.context()}`] : []),
       // how she feels right now, last but for her language: small models follow the end of it best
       ...[this.bond?.moodLine()].filter(Boolean),
