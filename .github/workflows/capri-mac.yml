@@ -62,11 +62,11 @@ jobs:
           chmod +x src/main/mac/capri-helper
           ls -la src/main/mac | tee logs/build.log
           # her hands: agent-desktop (vercel-labs, Apache-2.0), the Apple Silicon build
-          mkdir -p hands
-          gh release download -R vercel-labs/agent-desktop -p '*-aarch64-apple-darwin.tar.gz' -D hands/dl
-          tar -xzf hands/dl/*.tar.gz -C hands/dl
-          find hands/dl -type f \( -name agent-desktop -o -name agent-desktop-macos-helper \) -exec cp {} hands/ \;
-          rm -rf hands/dl && chmod +x hands/* && ls -la hands | tee -a logs/build.log
+          mkdir -p hands/dl
+          ( curl -fsSL --retry 3 -o hands/dl/ad.tar.gz https://github.com/vercel-labs/agent-desktop/releases/download/v1.2.0/agent-desktop-v1.2.0-aarch64-apple-darwin.tar.gz \
+            && tar -xzf hands/dl/ad.tar.gz -C hands/dl \
+            && find hands/dl -type f \( -name agent-desktop -o -name agent-desktop-macos-helper \) -exec cp {} hands/ \; ) 2>&1 | tee -a logs/build.log || echo "agent-desktop: not downloaded" | tee -a logs/build.log
+          rm -rf hands/dl; chmod +x hands/* 2>/dev/null || true; ls -la hands | tee -a logs/build.log
           tag="capri-mac-$(date +%Y%m%d)-${{ github.run_number }}"
           echo "TAG=$tag" >> "$GITHUB_ENV"
           node -e "const f='package.json',p=require('./'+f);delete p.os;p.capriBuild='$tag';require('fs').writeFileSync(f,JSON.stringify(p,null,2))"
